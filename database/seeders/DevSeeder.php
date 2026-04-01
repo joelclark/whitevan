@@ -12,6 +12,9 @@ class DevSeeder extends Seeder
      * Each entry requires: name, email, password.
      * Passwords are automatically hashed by the User model's password cast.
      *
+     * IMPORTANT: This seeder must be idempotent — safe to run multiple times. Existing
+     * records are updated, new records added; no records are ever deleted.
+     *
      * @var array<int, array{name: string, email: string, password: string}>
      */
     protected array $devUsers = [
@@ -19,12 +22,16 @@ class DevSeeder extends Seeder
     ];
 
     /**
-     * Run the database seeds.
+     * Run the database seeds. Uses updateOrCreate keyed on email so this
+     * can be run repeatedly without duplicating users.
      */
     public function run(): void
     {
         foreach ($this->devUsers as $user) {
-            User::factory()->create($user);
+            User::updateOrCreate(
+                ['email' => $user['email']],
+                ['name' => $user['name'], 'password' => $user['password']],
+            );
         }
     }
 }
