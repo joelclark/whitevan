@@ -1,3 +1,58 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Common Commands
+
+### Development
+- `composer run dev` — starts PHP server, queue worker, log tail, and Vite dev server concurrently
+- `composer run setup` — full first-time setup (dependencies, .env, key, migrations, npm build)
+
+### Testing
+- `php artisan test --compact` — run all tests
+- `php artisan test --compact --filter=TestName` — run specific test(s)
+- `php artisan test --compact tests/Feature/SomeTest.php` — run a specific file
+- `npm run build` — always run after changes that touch frontend code, routes, or Fortify features to catch build failures
+
+### Linting & Formatting
+- `vendor/bin/pint --dirty --format agent` — format modified PHP files (run after any PHP changes)
+- `npm run lint` — ESLint with auto-fix
+- `npm run format` — Prettier formatting
+- `npm run types:check` — TypeScript type checking
+- `composer run ci:check` — full CI pipeline (all lints + tests)
+
+### Code Generation
+- `php artisan wayfinder:generate` — regenerate TypeScript route/action helpers after route changes
+
+## Architecture
+
+### Stack
+Laravel 13 (PHP 8.4) + React 19 via Inertia.js v3, Tailwind CSS v4, TypeScript, Pest v4.
+
+### Multi-Tenancy (Account Scoping)
+- `Account` model owns `User`s. Each user belongs to one account.
+- `AccountContext` (singleton) holds the current request's account, set by `SetAccountContext` middleware.
+- Models using the `BelongsToAccount` trait automatically scope all queries to the current account and auto-fill `account_id` on creation.
+- Registration (`CreateNewUser`) creates both a User and Account in a single transaction.
+
+### Auth
+Fortify handles authentication (login, registration, password reset, email verification, 2FA). Custom actions live in `app/Actions/Fortify/`. Views are rendered via Inertia (configured in `FortifyServiceProvider`).
+
+### Frontend
+- Pages: `resources/js/pages/` — Inertia auto-discovers page components
+- Layouts: `resources/js/layouts/` — `app-layout.tsx` (main), `auth-layout.tsx` (auth flows)
+- UI components: `resources/js/components/ui/` — Radix UI primitives with Tailwind
+- Wayfinder-generated route helpers: `resources/js/actions/` and `resources/js/routes/` (do not edit manually)
+- Shared Inertia props (user, account, app name) configured in `HandleInertiaRequests` middleware
+
+### Validation Concerns
+`PasswordValidationRules` and `ProfileValidationRules` traits in `app/Concerns/` provide reusable validation rule sets shared between Fortify actions and form requests.
+
+### Database
+SQLite in dev, production is PostgreSQL 18. Seeders must be idempotent (use `updateOrCreate`/`firstOrCreate`). All seed data goes in `DevSeeder`; `DatabaseSeeder` stays empty.  All FKs require indexes.  Never configure cascade-on-delete without discussion.
+
+---
+
 <laravel-boost-guidelines>
 === foundation rules ===
 

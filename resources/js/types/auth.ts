@@ -1,5 +1,6 @@
 export type User = {
     id: number;
+    account_id: number | null;
     name: string;
     email: string;
     avatar?: string;
@@ -10,8 +11,17 @@ export type User = {
     [key: string]: unknown;
 };
 
+export type Account = {
+    id: number;
+    name: string;
+    owner_user_id: number;
+    created_at: string;
+    updated_at: string;
+};
+
 export type Auth = {
     user: User;
+    account: Account | null;
 };
 
 export type TwoFactorSetupData = {

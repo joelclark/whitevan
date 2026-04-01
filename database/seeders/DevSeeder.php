@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Account;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -27,11 +28,20 @@ class DevSeeder extends Seeder
      */
     public function run(): void
     {
-        foreach ($this->devUsers as $user) {
-            User::updateOrCreate(
-                ['email' => $user['email']],
-                ['name' => $user['name'], 'password' => $user['password']],
+        foreach ($this->devUsers as $userData) {
+            $user = User::updateOrCreate(
+                ['email' => $userData['email']],
+                ['name' => $userData['name'], 'password' => $userData['password']],
             );
+
+            $account = Account::firstOrCreate(
+                ['owner_user_id' => $user->id],
+                ['name' => $user->name."'s Account"],
+            );
+
+            if ($user->account_id !== $account->id) {
+                $user->update(['account_id' => $account->id]);
+            }
         }
     }
 }
