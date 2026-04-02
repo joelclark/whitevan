@@ -48,6 +48,17 @@ class UserFactory extends Factory
     }
 
     /**
+     * Indicate that the user is a sysop with no account.
+     */
+    public function sysop(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_sysop' => true,
+            'account_id' => null,
+        ]);
+    }
+
+    /**
      * Indicate that the model has two-factor authentication configured.
      */
     public function withTwoFactor(): static

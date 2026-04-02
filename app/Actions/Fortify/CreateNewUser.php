@@ -40,7 +40,7 @@ class CreateNewUser implements CreatesNewUsers
                 'owner_user_id' => $user->id,
             ]);
 
-            $user->update(['account_id' => $account->id]);
+            $user->forceFill(['account_id' => $account->id])->save();
 
             return $user;
         });

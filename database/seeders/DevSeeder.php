@@ -23,6 +23,16 @@ class DevSeeder extends Seeder
     ];
 
     /**
+     * Sysop users to seed. These users have no account and is_sysop = true.
+     * Uses forceFill to bypass mass assignment protection on is_sysop.
+     *
+     * @var array<int, array{name: string, email: string, password: string}>
+     */
+    protected array $sysopUsers = [
+        ['name' => 'Sysop User', 'email' => 'sysop@example.com', 'password' => 'sysopsecretpass'],
+    ];
+
+    /**
      * Run the database seeds. Uses updateOrCreate keyed on email so this
      * can be run repeatedly without duplicating users.
      */
@@ -40,7 +50,18 @@ class DevSeeder extends Seeder
             );
 
             if ($user->account_id !== $account->id) {
-                $user->update(['account_id' => $account->id]);
+                $user->forceFill(['account_id' => $account->id])->save();
+            }
+        }
+
+        foreach ($this->sysopUsers as $userData) {
+            $user = User::updateOrCreate(
+                ['email' => $userData['email']],
+                ['name' => $userData['name'], 'password' => $userData['password']],
+            );
+
+            if (! $user->is_sysop) {
+                $user->forceFill(['is_sysop' => true, 'account_id' => null])->save();
             }
         }
     }

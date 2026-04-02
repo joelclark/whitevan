@@ -31,5 +31,16 @@ test('dev seeder is idempotent', function () {
     $this->seed(DevSeeder::class);
 
     expect(User::where('email', 'dev@example.com')->count())->toBe(1)
+        ->and(User::where('email', 'sysop@example.com')->count())->toBe(1)
         ->and(Account::count())->toBe(1);
+});
+
+test('dev seeder creates sysop user', function () {
+    $this->seed(DevSeeder::class);
+
+    $user = User::where('email', 'sysop@example.com')->first();
+
+    expect($user)->not->toBeNull()
+        ->and($user->is_sysop)->toBeTrue()
+        ->and($user->account_id)->toBeNull();
 });

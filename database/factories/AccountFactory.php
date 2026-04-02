@@ -30,7 +30,7 @@ class AccountFactory extends Factory
     public function configure(): static
     {
         return $this->afterCreating(function (Account $account): void {
-            $account->owner->update(['account_id' => $account->id]);
+            $account->owner->forceFill(['account_id' => $account->id])->save();
         });
     }
 }

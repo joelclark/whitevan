@@ -22,6 +22,7 @@ export type Account = {
 export type Auth = {
     user: User;
     account: Account | null;
+    is_sysop: boolean;
 };
 
 export type TwoFactorSetupData = {
