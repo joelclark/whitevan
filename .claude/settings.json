@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Bash(composer run ci:check:*)",
       "Bash(composer run test:*)",
       "Bash(find:*)",
       "Bash(grep:*)",

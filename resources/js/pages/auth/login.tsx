@@ -87,8 +87,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                 Log in
                             </Button>
                         </div>
-
-</>
+                    </>
                 )}
             </Form>
 
