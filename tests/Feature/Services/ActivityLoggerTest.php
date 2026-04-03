@@ -4,6 +4,7 @@ use App\Enums\ActivityLogType;
 use App\Models\Account;
 use App\Models\ActivityLog;
 use App\Services\ActivityLogger;
+use Illuminate\Support\Facades\Log;
 
 test('info method creates an activity log entry', function () {
     ActivityLogger::info('User signed up');
@@ -23,6 +24,26 @@ test('error method creates an activity log entry', function () {
 
     expect($log->type)->toBe(ActivityLogType::Error)
         ->and($log->metadata)->toBe(['attempts' => 5]);
+});
+
+test('info method writes to application log', function () {
+    Log::spy();
+
+    ActivityLogger::info('User signed up', ['ip' => '127.0.0.1']);
+
+    Log::shouldHaveReceived('info')
+        ->with('User signed up', ['metadata' => ['ip' => '127.0.0.1']])
+        ->once();
+});
+
+test('error method writes to application log', function () {
+    Log::spy();
+
+    ActivityLogger::error('Login lockout', ['attempts' => 5]);
+
+    Log::shouldHaveReceived('error')
+        ->with('Login lockout', ['metadata' => ['attempts' => 5]])
+        ->once();
 });
 
 test('record method passes account and user ids', function () {

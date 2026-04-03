@@ -6,6 +6,7 @@ use App\Enums\ActivityLogType;
 use App\Models\Account;
 use App\Models\ActivityLog;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Public API for recording activity log events.
@@ -38,6 +39,17 @@ class ActivityLogger
             'account_id' => $account?->id,
             'user_id' => $user?->id,
         ]);
+
+        $context = array_filter([
+            'metadata' => $metadata,
+            'account_id' => $account?->id,
+            'user_id' => $user?->id,
+        ]);
+
+        match ($type) {
+            ActivityLogType::Info => Log::info($description, $context),
+            ActivityLogType::Error => Log::error($description, $context),
+        };
     }
 
     /**
