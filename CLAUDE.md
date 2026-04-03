@@ -35,6 +35,14 @@ Laravel 13 (PHP 8.4) + React 19 via Inertia.js v3, Tailwind CSS v4, TypeScript, 
 - Models using the `BelongsToAccount` trait automatically scope all queries to the current account and auto-fill `account_id` on creation.
 - Registration (`CreateNewUser`) creates both a User and Account in a single transaction.
 
+### Sysops (System Operators)
+- Sysops are super-admin users with `is_sysop = true` and `account_id = null` — they operate outside tenant boundaries.
+- `is_sysop` is NOT mass-assignable; it can only be set via `forceFill()`, tinker, or direct DB access. No UI exists to grant/revoke sysop status.
+- `EnsureSysop` middleware (aliased as `'sysop'`) gates access; sysop routes use `['auth', 'verified', 'sysop']` middleware chain.
+- Sysop routes live in `routes/sysops.php`, controllers in `app/Http/Controllers/Sysops/`, pages in `resources/js/pages/sysops/`.
+- Frontend: `auth.is_sysop` shared Inertia prop controls sidebar visibility; sysop pages use a `SysopsLayout` wrapper.
+- `UserFactory` has a `->sysop()` state. DevSeeder creates a test sysop at `sysop@example.com` / `sysopsecretpass`.
+
 ### Auth
 Fortify handles authentication (login, registration, password reset, email verification, 2FA). Custom actions live in `app/Actions/Fortify/`. Views are rendered via Inertia (configured in `FortifyServiceProvider`).
 

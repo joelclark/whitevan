@@ -28,7 +28,9 @@
       "mcp__laravel-boost__list-routes",
       "mcp__laravel-boost__read-log-entries",
       "mcp__laravel-boost__search-docs",
-      "mcp__laravel-boost__tinker"
+      "mcp__laravel-boost__tinker",
+      "WebSearch",
+      "WebFetch(domain:nightwatch.laravel.com)"
     ]
   },
   "enableAllProjectMcpServers": true,

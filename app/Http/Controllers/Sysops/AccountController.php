@@ -17,4 +17,16 @@ class AccountController extends Controller
                 ->paginate(25),
         ]);
     }
+
+    public function show(Account $account): Response
+    {
+        $account->load([
+            'owner:id,name,email',
+            'users' => fn ($query) => $query->select('id', 'account_id', 'name', 'email', 'created_at')->orderBy('name'),
+        ]);
+
+        return Inertia::render('sysops/accounts/show', [
+            'account' => $account,
+        ]);
+    }
 }

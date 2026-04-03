@@ -32,7 +32,19 @@ test('dev seeder is idempotent', function () {
 
     expect(User::where('email', 'dev@example.com')->count())->toBe(1)
         ->and(User::where('email', 'sysop@example.com')->count())->toBe(1)
-        ->and(Account::count())->toBe(1);
+        ->and(Account::count())->toBe(3);
+});
+
+test('dev seeder creates additional accounts with users', function () {
+    $this->seed(DevSeeder::class);
+
+    $acme = Account::where('name', 'Acme Corp')->first();
+    $globex = Account::where('name', 'Globex Inc')->first();
+
+    expect($acme)->not->toBeNull()
+        ->and($acme->users)->toHaveCount(3)
+        ->and($globex)->not->toBeNull()
+        ->and($globex->users)->toHaveCount(4);
 });
 
 test('dev seeder creates sysop user', function () {
