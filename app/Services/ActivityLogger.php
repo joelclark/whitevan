@@ -3,14 +3,15 @@
 namespace App\Services;
 
 use App\Enums\ActivityLogType;
-use App\Jobs\WriteActivityLog;
 use App\Models\Account;
+use App\Models\ActivityLog;
 use App\Models\User;
 
 /**
  * Public API for recording activity log events.
  *
- * All writes are dispatched to a queued job so callers never block on the DB insert.
+ * Writes are performed inline — the insert is lightweight enough that deferral
+ * is unnecessary, and this works in both HTTP request and queued job contexts.
  *
  * Usage:
  *   ActivityLogger::info('User signed up', ['ip' => $ip], $account, $user);
@@ -30,13 +31,13 @@ class ActivityLogger
         ?Account $account = null,
         ?User $user = null,
     ): void {
-        WriteActivityLog::dispatch(
-            type: $type,
-            description: $description,
-            metadata: $metadata,
-            accountId: $account?->id,
-            userId: $user?->id,
-        );
+        ActivityLog::create([
+            'type' => $type,
+            'description' => $description,
+            'metadata' => $metadata,
+            'account_id' => $account?->id,
+            'user_id' => $user?->id,
+        ]);
     }
 
     /**
