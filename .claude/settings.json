@@ -7,6 +7,7 @@
       "Bash(grep:*)",
       "Bash(npm run build:*)",
       "Bash(npm run lint:*)",
+      "Bash(npm run:*)",
       "Bash(npx tsc:*)",
       "Bash(php artisan make:*)",
       "Bash(php artisan make:command:*)",
@@ -18,6 +19,7 @@
       "Bash(php artisan migrate:rollback:*)",
       "Bash(php artisan test:*)",
       "Bash(php:*)",
+      "Bash(sort -t: -k2 -nr)",
       "Bash(vendor/bin/pint:*)",
       "mcp__laravel-boost__application-info",
       "mcp__laravel-boost__browser-logs",
@@ -29,8 +31,8 @@
       "mcp__laravel-boost__read-log-entries",
       "mcp__laravel-boost__search-docs",
       "mcp__laravel-boost__tinker",
-      "WebSearch",
-      "WebFetch(domain:nightwatch.laravel.com)"
+      "WebFetch(domain:nightwatch.laravel.com)",
+      "WebSearch"
     ]
   },
   "enableAllProjectMcpServers": true,

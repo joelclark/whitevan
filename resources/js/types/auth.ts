@@ -25,6 +25,18 @@ export type Auth = {
     is_sysop: boolean;
 };
 
+export type ActivityLog = {
+    id: number;
+    type: 'error' | 'info';
+    description: string;
+    metadata: Record<string, unknown> | null;
+    account_id: number | null;
+    user_id: number | null;
+    created_at: string;
+    account: Pick<Account, 'id' | 'name'> | null;
+    user: Pick<User, 'id' | 'name' | 'email'> | null;
+};
+
 export type TwoFactorSetupData = {
     svg: string;
     url: string;

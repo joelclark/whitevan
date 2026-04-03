@@ -13,6 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `php artisan test --compact --filter=TestName` — run specific test(s)
 - `php artisan test --compact tests/Feature/SomeTest.php` — run a specific file
 - `npm run build` — always run after changes that touch frontend code, routes, or Fortify features to catch build failures
+- `npm run lint` — always run after changes that touch frontend code to catch lint errors
 
 ### Linting & Formatting
 - `vendor/bin/pint --dirty --format agent` — format modified PHP files (run after any PHP changes)
@@ -52,6 +53,20 @@ Fortify handles authentication (login, registration, password reset, email verif
 - UI components: `resources/js/components/ui/` — Radix UI primitives with Tailwind
 - Wayfinder-generated route helpers: `resources/js/actions/` and `resources/js/routes/` (do not edit manually)
 - Shared Inertia props (user, account, app name) configured in `HandleInertiaRequests` middleware
+
+### Activity Log
+- `ActivityLogger::info(description, metadata?, account?, user?)` / `ActivityLogger::error(...)` — record events via queued job.
+- The `ActivityLog` model does NOT use `BelongsToAccount` — sysops see all events cross-tenant.
+- Enum: `ActivityLogType` (Info, Error) in `app/Enums/`.
+- Sysop screen: `/sysops/activity-logs`.
+- Auth events (login, failed login, lockout) are wired via listeners in `app/Listeners/`.
+
+#### When to fire activity log events
+Any feature that changes user or account state, or represents a security-relevant action, **must** fire an activity log event. Examples:
+- **Auth**: login, failed login, lockout, password reset, 2FA enable/disable (login/failed/lockout already wired)
+- **Account lifecycle**: sign-up, account creation, account deletion, ownership transfer
+- **Permission/security**: role changes, sysop access, authorization failures
+- **Do NOT log**: page views, routine reads, search queries, background job progress, or any high-frequency action
 
 ### Validation Concerns
 `PasswordValidationRules` and `ProfileValidationRules` traits in `app/Concerns/` provide reusable validation rule sets shared between Fortify actions and form requests.

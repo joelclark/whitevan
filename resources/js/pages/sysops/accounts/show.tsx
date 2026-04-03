@@ -9,6 +9,8 @@ type AccountDetail = Account & {
 
 export default function AccountShow({ account }: { account: AccountDetail }) {
     setLayoutProps({
+        title: account.name,
+        description: 'Account details and users',
         breadcrumbs: [
             { title: 'Sysops', href: sysopsAccountsIndex().url },
             { title: 'Accounts', href: sysopsAccountsIndex().url },
@@ -33,15 +35,25 @@ export default function AccountShow({ account }: { account: AccountDetail }) {
                         </div>
                         <div className="flex px-4 py-3">
                             <dt className="w-32 font-medium">Owner</dt>
-                            <dd>{account.owner.name} ({account.owner.email})</dd>
+                            <dd>
+                                {account.owner.name} ({account.owner.email})
+                            </dd>
                         </div>
                         <div className="flex px-4 py-3">
                             <dt className="w-32 font-medium">Created</dt>
-                            <dd>{new Date(account.created_at).toLocaleDateString()}</dd>
+                            <dd>
+                                {new Date(
+                                    account.created_at,
+                                ).toLocaleDateString()}
+                            </dd>
                         </div>
                         <div className="flex px-4 py-3">
                             <dt className="w-32 font-medium">Updated</dt>
-                            <dd>{new Date(account.updated_at).toLocaleDateString()}</dd>
+                            <dd>
+                                {new Date(
+                                    account.updated_at,
+                                ).toLocaleDateString()}
+                            </dd>
                         </div>
                     </dl>
                 </div>
@@ -55,16 +67,25 @@ export default function AccountShow({ account }: { account: AccountDetail }) {
                                 <th className="px-4 py-3 font-medium">ID</th>
                                 <th className="px-4 py-3 font-medium">Name</th>
                                 <th className="px-4 py-3 font-medium">Email</th>
-                                <th className="px-4 py-3 font-medium">Created</th>
+                                <th className="px-4 py-3 font-medium">
+                                    Created
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             {account.users.map((user) => (
-                                <tr key={user.id} className="border-b last:border-0">
+                                <tr
+                                    key={user.id}
+                                    className="border-b last:border-0"
+                                >
                                     <td className="px-4 py-3">{user.id}</td>
                                     <td className="px-4 py-3">{user.name}</td>
                                     <td className="px-4 py-3">{user.email}</td>
-                                    <td className="px-4 py-3">{new Date(user.created_at).toLocaleDateString()}</td>
+                                    <td className="px-4 py-3">
+                                        {new Date(
+                                            user.created_at,
+                                        ).toLocaleDateString()}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

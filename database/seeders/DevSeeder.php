@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ActivityLogType;
 use App\Models\Account;
+use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -115,6 +117,41 @@ class DevSeeder extends Seeder
             if (! $user->is_sysop) {
                 $user->forceFill(['is_sysop' => true, 'account_id' => null])->save();
             }
+        }
+
+        $this->seedActivityLogs();
+    }
+
+    /**
+     * Seed sample activity log entries for development.
+     */
+    private function seedActivityLogs(): void
+    {
+        $acme = Account::where('name', 'Acme Corp')->first();
+        $globex = Account::where('name', 'Globex Inc')->first();
+        $alice = User::where('email', 'alice@acme.example.com')->first();
+        $bob = User::where('email', 'bob@acme.example.com')->first();
+        $dan = User::where('email', 'dan@globex.example.com')->first();
+        $eve = User::where('email', 'eve@globex.example.com')->first();
+
+        $logs = [
+            ['type' => ActivityLogType::Info, 'description' => 'User signed up', 'metadata' => ['ip' => '192.168.1.10'], 'account_id' => $acme?->id, 'user_id' => $alice?->id],
+            ['type' => ActivityLogType::Info, 'description' => 'User logged in', 'metadata' => ['ip' => '192.168.1.11'], 'account_id' => $acme?->id, 'user_id' => $bob?->id],
+            ['type' => ActivityLogType::Error, 'description' => 'Login lockout after 5 failed attempts', 'metadata' => ['ip' => '10.0.0.5', 'attempts' => 5], 'account_id' => $globex?->id, 'user_id' => $eve?->id],
+            ['type' => ActivityLogType::Info, 'description' => 'User signed up', 'metadata' => ['ip' => '10.0.0.1'], 'account_id' => $globex?->id, 'user_id' => $dan?->id],
+            ['type' => ActivityLogType::Info, 'description' => 'Password reset requested', 'metadata' => ['ip' => '172.16.0.3'], 'account_id' => $acme?->id, 'user_id' => $alice?->id],
+            ['type' => ActivityLogType::Error, 'description' => 'Email verification failed — token expired', 'metadata' => null, 'account_id' => $globex?->id, 'user_id' => $eve?->id],
+            ['type' => ActivityLogType::Info, 'description' => 'Two-factor authentication enabled', 'metadata' => null, 'account_id' => $acme?->id, 'user_id' => $bob?->id],
+            ['type' => ActivityLogType::Error, 'description' => 'Queue worker restarted unexpectedly', 'metadata' => ['signal' => 'SIGTERM'], 'account_id' => null, 'user_id' => null],
+            ['type' => ActivityLogType::Info, 'description' => 'Account created', 'metadata' => null, 'account_id' => $acme?->id, 'user_id' => $alice?->id],
+            ['type' => ActivityLogType::Info, 'description' => 'User logged in', 'metadata' => ['ip' => '10.0.0.2'], 'account_id' => $globex?->id, 'user_id' => $dan?->id],
+        ];
+
+        foreach ($logs as $log) {
+            ActivityLog::firstOrCreate(
+                ['type' => $log['type'], 'description' => $log['description'], 'user_id' => $log['user_id']],
+                ['metadata' => $log['metadata'], 'account_id' => $log['account_id']],
+            );
         }
     }
 }

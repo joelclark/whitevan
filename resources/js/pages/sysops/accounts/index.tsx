@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, setLayoutProps } from '@inertiajs/react';
 import TextLink from '@/components/text-link';
 import { index as sysopsAccountsIndex, show } from '@/routes/sysops/accounts';
 import type { Account, User } from '@/types';
@@ -15,7 +15,16 @@ type PaginatedAccounts = {
     total: number;
 };
 
-export default function AccountsIndex({ accounts }: { accounts: PaginatedAccounts }) {
+export default function AccountsIndex({
+    accounts,
+}: {
+    accounts: PaginatedAccounts;
+}) {
+    setLayoutProps({
+        title: 'Accounts',
+        description: 'Manage tenant accounts',
+    });
+
     return (
         <>
             <Head title="Accounts" />
@@ -31,13 +40,24 @@ export default function AccountsIndex({ accounts }: { accounts: PaginatedAccount
                     </thead>
                     <tbody>
                         {accounts.data.map((account) => (
-                            <tr key={account.id} className="border-b last:border-0">
+                            <tr
+                                key={account.id}
+                                className="border-b last:border-0"
+                            >
                                 <td className="px-4 py-3">{account.id}</td>
                                 <td className="px-4 py-3">
-                                    <TextLink href={show(account.id).url}>{account.name}</TextLink>
+                                    <TextLink href={show(account.id).url}>
+                                        {account.name}
+                                    </TextLink>
                                 </td>
-                                <td className="px-4 py-3">{account.owner.name}</td>
-                                <td className="px-4 py-3">{new Date(account.created_at).toLocaleDateString()}</td>
+                                <td className="px-4 py-3">
+                                    {account.owner.name}
+                                </td>
+                                <td className="px-4 py-3">
+                                    {new Date(
+                                        account.created_at,
+                                    ).toLocaleDateString()}
+                                </td>
                             </tr>
                         ))}
                     </tbody>

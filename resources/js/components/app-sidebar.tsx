@@ -1,5 +1,11 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid, Shield } from 'lucide-react';
+import {
+    Activity,
+    BookOpen,
+    FolderGit2,
+    LayoutGrid,
+    Shield,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -15,6 +21,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as sysopsAccountsIndex } from '@/routes/sysops/accounts';
+import { index as sysopsActivityLogsIndex } from '@/routes/sysops/activity-logs';
 import type { Auth, NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -30,6 +37,11 @@ const sysopsNavItems: NavItem[] = [
         title: 'Accounts',
         href: sysopsAccountsIndex().url,
         icon: Shield,
+    },
+    {
+        title: 'Activity Log',
+        href: sysopsActivityLogsIndex().url,
+        icon: Activity,
     },
 ];
 
@@ -65,7 +77,9 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
-                {auth.is_sysop && <NavMain items={sysopsNavItems} label="Sysops" />}
+                {auth.is_sysop && (
+                    <NavMain items={sysopsNavItems} label="Sysops" />
+                )}
             </SidebarContent>
 
             <SidebarFooter>
