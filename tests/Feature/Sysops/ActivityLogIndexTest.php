@@ -100,6 +100,49 @@ test('search matches account name', function () {
         );
 });
 
+test('search is case-insensitive for description', function () {
+    $sysop = User::factory()->sysop()->create();
+    ActivityLog::factory()->create(['description' => 'User Signed Up']);
+    ActivityLog::factory()->create(['description' => 'Login lockout']);
+
+    $this->actingAs($sysop)
+        ->get('/sysops/activity-logs?search=user+signed+up')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('activityLogs.data', 1)
+            ->where('activityLogs.data.0.description', 'User Signed Up')
+        );
+});
+
+test('search is case-insensitive for user name', function () {
+    $sysop = User::factory()->sysop()->create();
+    $account = Account::factory()->create();
+    $user = $account->owner;
+    ActivityLog::factory()->forUser($user)->create(['description' => 'some event']);
+    ActivityLog::factory()->create(['description' => 'unrelated event']);
+
+    $this->actingAs($sysop)
+        ->get('/sysops/activity-logs?search='.urlencode(strtolower($user->name)))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('activityLogs.data', 1)
+        );
+});
+
+test('search is case-insensitive for account name', function () {
+    $sysop = User::factory()->sysop()->create();
+    $account = Account::factory()->create(['name' => 'Acme Widgets']);
+    ActivityLog::factory()->forAccount($account)->create(['description' => 'some event']);
+    ActivityLog::factory()->create(['description' => 'unrelated event']);
+
+    $this->actingAs($sysop)
+        ->get('/sysops/activity-logs?search=acme+widgets')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('activityLogs.data', 1)
+        );
+});
+
 test('activity logs can be filtered by account', function () {
     $sysop = User::factory()->sysop()->create();
     $account1 = Account::factory()->create();
