@@ -59,17 +59,21 @@ Fortify handles authentication (login, registration, password reset, email verif
 - The `ActivityLog` model does NOT use `BelongsToAccount` — sysops see all events cross-tenant.
 - Enum: `ActivityLogType` (Info, Error) in `app/Enums/`.
 - Sysop screen: `/sysops/activity-logs`.
-- Auth events (login, failed login, lockout) are wired via listeners in `app/Listeners/`.
+- Auth events are wired via listeners in `app/Listeners/`. Successful logins go to the activity log DB. Failed logins and lockouts log to the application log only (no DB write) to avoid database spam from brute force attacks.
 
 #### When to fire activity log events
 Any feature that changes user or account state, or represents a security-relevant action, **must** fire an activity log event. Examples:
-- **Auth**: login, failed login, lockout, password reset, 2FA enable/disable (login/failed/lockout already wired)
-- **Account lifecycle**: sign-up, account creation, account deletion, ownership transfer
+- **Auth**: login, password reset, 2FA enable/disable (all wired). Failed logins and lockouts go to the application log, not the activity log DB.
+- **Do NOT activity-log**: failed logins, lockouts — these are high-volume under attack and go to the application log instead
+- **Account lifecycle**: sign-up (currently disabled), account creation, account deletion, ownership transfer
 - **Permission/security**: role changes, sysop access, authorization failures
 - **Do NOT log**: page views, routine reads, search queries, background job progress, or any high-frequency action
 
 ### Validation Concerns
 `PasswordValidationRules` and `ProfileValidationRules` traits in `app/Concerns/` provide reusable validation rule sets shared between Fortify actions and form requests.
+
+### Git Commits
+- Message format: `type: short description` (lowercase, no period). Types: `feature`, `fix`, `ops`, `refactor`, `test`, `docs`.
 
 ### Database
 SQLite in dev, production is PostgreSQL 18. Seeders must be idempotent (use `updateOrCreate`/`firstOrCreate`). All seed data goes in `DevSeeder`; `DatabaseSeeder` stays empty.  All FKs require indexes.  Never configure cascade-on-delete without discussion.

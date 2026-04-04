@@ -233,7 +233,22 @@ export default function ActivityLogsIndex({
                                             : 'Info'}
                                     </Badge>
                                 </td>
-                                <td className="px-4 py-3">{log.description}</td>
+                                <td className="px-4 py-3">
+                                    {log.description}
+                                    {log.metadata &&
+                                        Object.keys(log.metadata).length >
+                                            0 && (
+                                            <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                                                {Object.entries(
+                                                    log.metadata,
+                                                ).map(([key, value]) => (
+                                                    <span key={key}>
+                                                        {key}: {String(value)}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                </td>
                                 <td className="px-4 py-3">
                                     {log.user?.name ?? log.user?.email ?? '—'}
                                 </td>

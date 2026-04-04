@@ -2,9 +2,8 @@
 
 namespace App\Listeners;
 
-use App\Models\User;
-use App\Services\ActivityLogger;
 use Illuminate\Auth\Events\Lockout;
+use Illuminate\Support\Facades\Log;
 
 class LogLockout
 {
@@ -13,14 +12,9 @@ class LogLockout
      */
     public function handle(Lockout $event): void
     {
-        $email = $event->request->input('email');
-        $user = User::where('email', $email)->first();
-
-        ActivityLogger::error(
-            'Login lockout',
-            ['email' => $email, 'ip' => $event->request->ip()],
-            $user?->account,
-            $user,
-        );
+        Log::warning('Login lockout', [
+            'email' => $event->request->input('email'),
+            'ip' => $event->request->ip(),
+        ]);
     }
 }
