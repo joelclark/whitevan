@@ -3,11 +3,13 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\SecurityGroup;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -34,6 +36,31 @@ class User extends Authenticatable
     public function ownedAccount(): HasOne
     {
         return $this->hasOne(Account::class, 'owner_user_id');
+    }
+
+    /**
+     * Get the security group memberships for this user.
+     */
+    public function securityGroupMemberships(): HasMany
+    {
+        return $this->hasMany(SecurityGroupUser::class);
+    }
+
+    /**
+     * Determine if the user belongs to a security group.
+     */
+    public function hasSecurityGroup(SecurityGroup $group): bool
+    {
+        return $this->securityGroupMemberships
+            ->contains('security_group', $group);
+    }
+
+    /**
+     * Determine if the user is an admin.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->hasSecurityGroup(SecurityGroup::Admin);
     }
 
     /**

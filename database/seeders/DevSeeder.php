@@ -3,8 +3,10 @@
 namespace Database\Seeders;
 
 use App\Enums\ActivityLogType;
+use App\Enums\SecurityGroup;
 use App\Models\Account;
 use App\Models\ActivityLog;
+use App\Models\SecurityGroupUser;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -119,7 +121,31 @@ class DevSeeder extends Seeder
             }
         }
 
+        $this->seedSecurityGroups();
         $this->seedActivityLogs();
+    }
+
+    /**
+     * Seed security group memberships for development.
+     */
+    private function seedSecurityGroups(): void
+    {
+        $admins = [
+            'dev@example.com',
+            'alice@acme.example.com',
+            'dan@globex.example.com',
+        ];
+
+        foreach ($admins as $email) {
+            $user = User::where('email', $email)->first();
+
+            if ($user) {
+                SecurityGroupUser::firstOrCreate([
+                    'user_id' => $user->id,
+                    'security_group' => SecurityGroup::Admin,
+                ]);
+            }
+        }
     }
 
     /**

@@ -23,6 +23,7 @@ export type Auth = {
     user: User;
     account: Account | null;
     is_sysop: boolean;
+    security_groups: string[];
 };
 
 export type ActivityLog = {

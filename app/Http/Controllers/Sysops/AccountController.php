@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Sysops;
 
+use App\Enums\SecurityGroup;
 use App\Http\Controllers\Controller;
 use App\Models\Account;
 use Inertia\Inertia;
@@ -22,11 +23,12 @@ class AccountController extends Controller
     {
         $account->load([
             'owner:id,name,email',
-            'users' => fn ($query) => $query->select('id', 'account_id', 'name', 'email', 'created_at')->orderBy('name'),
+            'users' => fn ($query) => $query->select('id', 'account_id', 'name', 'email', 'created_at')->with('securityGroupMemberships')->orderBy('name'),
         ]);
 
         return Inertia::render('sysops/accounts/show', [
             'account' => $account,
+            'securityGroups' => SecurityGroup::toArray(),
         ]);
     }
 }

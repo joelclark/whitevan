@@ -42,6 +42,12 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
                 'account' => $request->user()?->account,
                 'is_sysop' => (bool) $request->user()?->isSysop(),
+                'security_groups' => $request->user()
+                    ?->loadMissing('securityGroupMemberships')
+                    ->securityGroupMemberships
+                    ->pluck('security_group')
+                    ->map(fn ($group) => $group->value)
+                    ->all() ?? [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
