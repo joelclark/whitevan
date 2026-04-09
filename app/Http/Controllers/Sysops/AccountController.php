@@ -23,7 +23,7 @@ class AccountController extends Controller
     {
         $account->load([
             'owner:id,name,email',
-            'users' => fn ($query) => $query->select('id', 'account_id', 'name', 'email', 'created_at')->with('securityGroupMemberships')->orderBy('name'),
+            'users' => fn ($query) => $query->select('id', 'account_id', 'name', 'email', 'deactivated_at', 'created_at')->with('securityGroupMemberships')->orderBy('name'),
         ]);
 
         return Inertia::render('sysops/accounts/show', [

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { index as sysopsAccountsIndex, show } from '@/routes/sysops/accounts';
+import { update as updateActivation } from '@/routes/sysops/accounts/users/activation';
 import { update as updateSecurityGroups } from '@/routes/sysops/accounts/users/security-groups';
 import type { Account, User } from '@/types';
 
@@ -28,7 +29,10 @@ type SecurityGroupMembership = {
     security_group: string;
 };
 
-type AccountUser = Pick<User, 'id' | 'name' | 'email' | 'created_at'> & {
+type AccountUser = Pick<
+    User,
+    'id' | 'name' | 'email' | 'deactivated_at' | 'created_at'
+> & {
     security_group_memberships: SecurityGroupMembership[];
 };
 
@@ -90,6 +94,14 @@ export default function AccountShow({
         );
     }
 
+    function toggleActivation(user: AccountUser) {
+        router.put(
+            updateActivation([account.id, user.id]).url,
+            { deactivated: !user.deactivated_at },
+            { preserveScroll: true },
+        );
+    }
+
     function userGroups(user: AccountUser): string[] {
         return user.security_group_memberships.map((m) => m.security_group);
     }
@@ -144,6 +156,9 @@ export default function AccountShow({
                                 <th className="px-4 py-3 font-medium">Name</th>
                                 <th className="px-4 py-3 font-medium">Email</th>
                                 <th className="px-4 py-3 font-medium">
+                                    Status
+                                </th>
+                                <th className="px-4 py-3 font-medium">
                                     Groups
                                 </th>
                                 <th className="px-4 py-3 font-medium">
@@ -156,11 +171,24 @@ export default function AccountShow({
                             {account.users.map((user) => (
                                 <tr
                                     key={user.id}
-                                    className="border-b last:border-0"
+                                    className={`border-b last:border-0 ${user.deactivated_at ? 'opacity-50' : ''}`}
                                 >
                                     <td className="px-4 py-3">{user.id}</td>
                                     <td className="px-4 py-3">{user.name}</td>
                                     <td className="px-4 py-3">{user.email}</td>
+                                    <td className="px-4 py-3">
+                                        <Badge
+                                            variant={
+                                                user.deactivated_at
+                                                    ? 'destructive'
+                                                    : 'secondary'
+                                            }
+                                        >
+                                            {user.deactivated_at
+                                                ? 'Deactivated'
+                                                : 'Active'}
+                                        </Badge>
+                                    </td>
                                     <td className="px-4 py-3">
                                         <div className="flex gap-1">
                                             {userGroups(user).map((group) => (
@@ -182,13 +210,26 @@ export default function AccountShow({
                                         ).toLocaleDateString()}
                                     </td>
                                     <td className="px-4 py-3">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => openDialog(user)}
-                                        >
-                                            Edit groups
-                                        </Button>
+                                        <div className="flex gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => openDialog(user)}
+                                            >
+                                                Edit groups
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() =>
+                                                    toggleActivation(user)
+                                                }
+                                            >
+                                                {user.deactivated_at
+                                                    ? 'Activate'
+                                                    : 'Deactivate'}
+                                            </Button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

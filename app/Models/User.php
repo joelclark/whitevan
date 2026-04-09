@@ -72,6 +72,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Determine if the user has been deactivated.
+     */
+    public function isDeactivated(): bool
+    {
+        return $this->deactivated_at !== null;
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -83,6 +91,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'is_sysop' => 'boolean',
+            'deactivated_at' => 'datetime',
         ];
     }
 }
