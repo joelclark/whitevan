@@ -42,6 +42,7 @@ const sysopsNavItems: NavItem[] = [
         title: 'Activity Log',
         href: sysopsActivityLogsIndex().url,
         icon: Activity,
+        cacheFor: 0,
     },
 ];
 

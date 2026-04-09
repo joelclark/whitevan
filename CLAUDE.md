@@ -44,18 +44,29 @@ Laravel 13 (PHP 8.4) + React 19 via Inertia.js v3, Tailwind CSS v4, TypeScript, 
 - Frontend: `auth.is_sysop` shared Inertia prop controls sidebar visibility; sysop pages use a `SysopsLayout` wrapper.
 - `UserFactory` has a `->sysop()` state. DevSeeder creates a test sysop at `sysop@example.com` / `sysopsecretpass`.
 
+### Security Groups
+- `SecurityGroup` enum in `app/Enums/` defines roles (currently `Admin`). Each case provides `label()`, `description()`, and `abilities()`.
+- Pivot model `SecurityGroupUser` links users to groups. User helpers: `hasSecurityGroup()`, `isAdmin()`.
+- `Gate::before()` in `AppServiceProvider`: sysops bypass all checks; `Admin` group members get all abilities (`*`).
+- Managed via sysop UI at `/sysops/{account}` — sysops themselves cannot have security group memberships.
+
 ### Auth
-Fortify handles authentication (login, registration, password reset, email verification, 2FA). Custom actions live in `app/Actions/Fortify/`. Views are rendered via Inertia (configured in `FortifyServiceProvider`).
+Fortify handles authentication (login, registration, password reset, email verification, 2FA). Custom actions live in `app/Actions/Fortify/`. Views are rendered via Inertia (configured in `FortifyServiceProvider`). Registration is currently disabled (returns 404) — users are added by other means.
+
+### Routes
+- `routes/web.php` — top-level routes, includes `settings.php` and `sysops.php`
+- `routes/settings.php` — profile, password, 2FA, appearance (auth + verified)
+- `routes/sysops.php` — sysop admin routes (auth + verified + sysop)
 
 ### Frontend
 - Pages: `resources/js/pages/` — Inertia auto-discovers page components
-- Layouts: `resources/js/layouts/` — `app-layout.tsx` (main), `auth-layout.tsx` (auth flows)
+- Layouts: `resources/js/layouts/` — `app-layout.tsx` (main), `auth-layout.tsx` (auth), `settings-layout.tsx`, `sysops-layout.tsx`
 - UI components: `resources/js/components/ui/` — Radix UI primitives with Tailwind
 - Wayfinder-generated route helpers: `resources/js/actions/` and `resources/js/routes/` (do not edit manually)
 - Shared Inertia props (user, account, app name) configured in `HandleInertiaRequests` middleware
 
 ### Activity Log
-- `ActivityLogger::info(description, metadata?, account?, user?)` / `ActivityLogger::error(...)` — record events via queued job.
+- `ActivityLogger::info(description, metadata?, account?, user?)` / `ActivityLogger::error(...)` — record events inline (not queued).
 - The `ActivityLog` model does NOT use `BelongsToAccount` — sysops see all events cross-tenant.
 - Enum: `ActivityLogType` (Info, Error) in `app/Enums/`.
 - Sysop screen: `/sysops/activity-logs`.
@@ -116,12 +127,13 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 This project has domain-specific skills available. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
 
+- `fortify-development` — ACTIVATE when the user works on authentication in Laravel. This includes login, registration, password reset, email verification, two-factor authentication (2FA/TOTP/QR codes/recovery codes), profile updates, password confirmation, or any auth-related routes and controllers. Activate when the user mentions Fortify, auth, authentication, login, register, signup, forgot password, verify email, 2FA, or references app/Actions/Fortify/, CreateNewUser, UpdateUserProfileInformation, FortifyServiceProvider, config/fortify.php, or auth guards. Fortify is the frontend-agnostic authentication backend for Laravel that registers all auth routes and controllers. Also activate when building SPA or headless authentication, customizing login redirects, overriding response contracts like LoginResponse, or configuring login throttling. Do NOT activate for Laravel Passport (OAuth2 API tokens), Socialite (OAuth social login), or non-auth Laravel features.
 - `laravel-best-practices` — Apply this skill whenever writing, reviewing, or refactoring Laravel PHP code. This includes creating or modifying controllers, models, migrations, form requests, policies, jobs, scheduled commands, service classes, and Eloquent queries. Triggers for N+1 and query performance issues, caching strategies, authorization and security patterns, validation, error handling, queue and job configuration, route definitions, and architectural decisions. Also use for Laravel code reviews and refactoring existing Laravel code to follow best practices. Covers any task involving Laravel backend PHP code patterns.
+- `configure-nightwatch` — Configures Laravel Nightwatch data collection, sampling rates, filtering rules, and redaction policies. Use when setting up Nightwatch, managing data volume, protecting sensitive data (PII), or optimizing event collection for production workloads.
 - `wayfinder-development` — Use this skill for Laravel Wayfinder which auto-generates typed functions for Laravel controllers and routes. ALWAYS use this skill when frontend code needs to call backend routes or controller actions. Trigger when: connecting any React/Vue/Svelte/Inertia frontend to Laravel controllers, routes, building end-to-end features with both frontend and backend, wiring up forms or links to backend endpoints, fixing route-related TypeScript errors, importing from @/actions or @/routes, or running wayfinder:generate. Use Wayfinder route functions instead of hardcoded URLs. Covers: wayfinder() vite plugin, .url()/.get()/.post()/.form(), query params, route model binding, tree-shaking. Do not use for backend-only task
-- `pest-testing` — Use this skill for Pest PHP testing in Laravel projects only. Trigger whenever any test is being written, edited, fixed, or refactored — including fixing tests that broke after a code change, adding assertions, converting PHPUnit to Pest, adding datasets, and TDD workflows. Always activate when the user asks how to write something in Pest, mentions test files or directories (tests/Feature, tests/Unit, tests/Browser), or needs browser testing, smoke testing multiple pages for JS errors, or architecture tests. Covers: it()/expect() syntax, datasets, mocking, browser testing (visit/click/fill), smoke testing, arch(), Livewire component tests, RefreshDatabase, and all Pest 4 features. Do not use for factories, seeders, migrations, controllers, models, or non-test PHP code.
+- `pest-testing` — Use this skill for Pest PHP testing in Laravel projects only. Trigger whenever any test is being written, edited, fixed, or refactored — including fixing tests that broke after a code change, adding assertions, converting PHPUnit to Pest, adding datasets, and TDD workflows. Always activate when the user asks how to write something in Pest, mentions test files or directories (tests/Feature, tests/Unit, tests/Browser), or needs browser testing, smoke testing multiple pages for JS errors, or architecture tests. Covers: test()/it()/expect() syntax, datasets, mocking, browser testing (visit/click/fill), smoke testing, arch(), Livewire component tests, RefreshDatabase, and all Pest 4 features. Do not use for factories, seeders, migrations, controllers, models, or non-test PHP code.
 - `inertia-react-development` — Develops Inertia.js v3 React client-side applications. Activates when creating React pages, forms, or navigation; using <Link>, <Form>, useForm, useHttp, setLayoutProps, or router; working with deferred props, prefetching, optimistic updates, instant visits, or polling; or when user mentions React with Inertia, React pages, React forms, or React navigation.
 - `tailwindcss-development` — Always invoke when the user's message includes 'tailwind' in any form. Also invoke for: building responsive grid layouts (multi-column card grids, product grids), flex/grid page structures (dashboards with sidebars, fixed topbars, mobile-toggle navs), styling UI components (cards, tables, navbars, pricing sections, forms, inputs, badges), adding dark mode variants, fixing spacing or typography, and Tailwind v3/v4 work. The core use case: writing or fixing Tailwind utility classes in HTML templates (Blade, JSX, Vue). Skip for backend PHP logic, database queries, API routes, JavaScript with no HTML/CSS component, CSS file audits, build tool configuration, and vanilla CSS.
-- `fortify-development` — ACTIVATE when the user works on authentication in Laravel. This includes login, registration, password reset, email verification, two-factor authentication (2FA/TOTP/QR codes/recovery codes), profile updates, password confirmation, or any auth-related routes and controllers. Activate when the user mentions Fortify, auth, authentication, login, register, signup, forgot password, verify email, 2FA, or references app/Actions/Fortify/, CreateNewUser, UpdateUserProfileInformation, FortifyServiceProvider, config/fortify.php, or auth guards. Fortify is the frontend-agnostic authentication backend for Laravel that registers all auth routes and controllers. Also activate when building SPA or headless authentication, customizing login redirects, overriding response contracts like LoginResponse, or configuring login throttling. Do NOT activate for Laravel Passport (OAuth2 API tokens), Socialite (OAuth social login), or non-auth Laravel features.
 
 ## Conventions
 
@@ -259,6 +271,10 @@ This project has domain-specific skills available. You MUST activate the relevan
 ## Vite Error
 
 - If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
+
+## Deployment
+
+- Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
 
 === wayfinder/core rules ===
 

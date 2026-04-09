@@ -75,8 +75,8 @@ export default function AccountShow({
 
     function saveGroups() {
         if (!editingUser) {
-return;
-}
+            return;
+        }
 
         setSaving(true);
         router.put(
@@ -201,8 +201,8 @@ return;
                 open={editingUser !== null}
                 onOpenChange={(open) => {
                     if (!open) {
-setEditingUser(null);
-}
+                        setEditingUser(null);
+                    }
                 }}
             >
                 <DialogContent>
@@ -234,7 +234,7 @@ setEditingUser(null);
                                     <Label htmlFor={`group-${group.value}`}>
                                         {group.label}
                                     </Label>
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         {group.description}
                                     </p>
                                 </div>
