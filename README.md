@@ -37,6 +37,19 @@ php artisan git:push
 
 Runs `ci:check` against the current branch and, if green, pushes it to origin. Refuses to run on `master`/`main`/`dev` (prompts for a new branch name), rejects a dirty working tree, and enforces the `<prefix>/<kebab-name>` branch convention (`feature`, `fix`, `ops`, `refactor`, `test`, `docs`, `chore`).
 
+## Release Workflow
+
+Two long-lived branches: `dev` (integration) and `master` (production).
+
+- **Feature PRs** land on `dev` via **squash merge** (one commit per feature, clean history on `dev`).
+- **Releases** promote `dev` → `master` via **fast-forward** so `master` stays a strict ancestor of `dev`:
+  ```bash
+  git checkout master
+  git merge --ff-only origin/dev
+  git push origin master
+  ```
+  Or on GitHub, open a `dev` → `master` PR and use **Rebase and merge** (never squash — squashing breaks the ancestry and forces a history rewrite next time).
+
 ## More
 
 See `CLAUDE.md` for architecture notes, conventions, and subsystem details (multi-tenancy, sysops, security groups, activity log, etc.).
