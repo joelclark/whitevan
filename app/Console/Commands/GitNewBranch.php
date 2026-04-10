@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Contracts\Process\ProcessResult;
 use Illuminate\Support\Facades\Process;
 
+use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 
@@ -30,16 +31,36 @@ class GitNewBranch extends Command
 
     public function handle(): int
     {
-        if ($this->workingTreeDirty()) {
-            $this->error('Working tree has uncommitted changes. Commit or stash them before running git:new-branch.');
+        $carryChanges = false;
 
-            return self::FAILURE;
+        if ($this->workingTreeDirty()) {
+            $carryChanges = confirm(
+                label: 'Working tree has uncommitted changes. Carry them onto the new branch?',
+                default: true,
+                hint: 'Your changes will be stashed, then re-applied after the new branch is created.',
+            );
+
+            if (! $carryChanges) {
+                $this->error('Aborted. Commit or stash your changes, then re-run git:new-branch.');
+
+                return self::FAILURE;
+            }
+
+            $stash = Process::path(base_path())->run('git stash push -u -m "git:new-branch carry"');
+
+            if ($stash->failed()) {
+                $this->error('Failed to stash your changes. Aborting before touching any branches.');
+                $this->line($stash->errorOutput() ?: $stash->output());
+
+                return self::FAILURE;
+            }
         }
 
         $fetch = $this->runStreamed('git fetch origin dev');
 
         if ($fetch->failed()) {
             $this->error("Failed to fetch 'dev' from origin. Does origin have a 'dev' branch?");
+            $this->noteStashIfCarrying($carryChanges);
 
             return self::FAILURE;
         }
@@ -49,6 +70,7 @@ class GitNewBranch extends Command
 
             if ($create->failed()) {
                 $this->error("Failed to create local 'dev' tracking origin/dev.");
+                $this->noteStashIfCarrying($carryChanges);
 
                 return self::FAILURE;
             }
@@ -58,6 +80,7 @@ class GitNewBranch extends Command
 
         if ($checkoutDev->failed()) {
             $this->error("Failed to checkout 'dev'.");
+            $this->noteStashIfCarrying($carryChanges);
 
             return self::FAILURE;
         }
@@ -66,6 +89,7 @@ class GitNewBranch extends Command
 
         if ($pull->failed()) {
             $this->error("Local 'dev' could not be fast-forwarded to origin/dev. Resolve the divergence manually and try again.");
+            $this->noteStashIfCarrying($carryChanges);
 
             return self::FAILURE;
         }
@@ -89,13 +113,31 @@ class GitNewBranch extends Command
 
         if ($checkoutNew->failed()) {
             $this->error("Failed to create branch '{$fullName}'. Does it already exist?");
+            $this->noteStashIfCarrying($carryChanges);
 
             return self::FAILURE;
+        }
+
+        if ($carryChanges) {
+            $pop = $this->runStreamed('git stash pop');
+
+            if ($pop->failed()) {
+                $this->error("Created '{$fullName}', but re-applying your stashed changes hit a conflict. Your work is still safe in 'git stash' — resolve the conflict on this branch and run 'git stash drop' when done.");
+
+                return self::FAILURE;
+            }
         }
 
         $this->info("Created '{$fullName}' off dev. Run php artisan git:push when ready.");
 
         return self::SUCCESS;
+    }
+
+    private function noteStashIfCarrying(bool $carryChanges): void
+    {
+        if ($carryChanges) {
+            $this->line("Your uncommitted changes are safe in 'git stash' (stash@{0}). Run 'git stash pop' after resolving the issue.");
+        }
     }
 
     /**
