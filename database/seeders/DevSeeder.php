@@ -20,10 +20,19 @@ class DevSeeder extends Seeder
      * IMPORTANT: This seeder must be idempotent — safe to run multiple times. Existing
      * records are updated, new records added; no records are ever deleted.
      *
-     * @var array<int, array{name: string, email: string, password: string}>
+     * @var array<int, array{name: string, email: string, password: string, members?: array<int, array{name: string, email: string, password: string}>}>
      */
     protected array $devUsers = [
-        ['name' => 'Dev User', 'email' => 'dev@example.com', 'password' => 'retryfilterqueue'],
+        [
+            'name' => 'Dev User',
+            'email' => 'dev@example.com',
+            'password' => 'retryfilterqueue',
+            'members' => [
+                ['name' => 'Jamie Rivera', 'email' => 'jamie@example.com', 'password' => 'jamierivapass'],
+                ['name' => 'Morgan Chen', 'email' => 'morgan@example.com', 'password' => 'morganchenpass'],
+                ['name' => 'Taylor Brooks', 'email' => 'taylor@example.com', 'password' => 'taylorbrookspass'],
+            ],
+        ],
     ];
 
     /**
@@ -80,6 +89,17 @@ class DevSeeder extends Seeder
 
             if ($user->account_id !== $account->id) {
                 $user->forceFill(['account_id' => $account->id])->save();
+            }
+
+            foreach ($userData['members'] ?? [] as $memberData) {
+                $member = User::updateOrCreate(
+                    ['email' => $memberData['email']],
+                    ['name' => $memberData['name'], 'password' => $memberData['password']],
+                );
+
+                if ($member->account_id !== $account->id) {
+                    $member->forceFill(['account_id' => $account->id])->save();
+                }
             }
         }
 

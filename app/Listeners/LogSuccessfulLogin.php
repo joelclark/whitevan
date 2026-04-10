@@ -16,7 +16,7 @@ class LogSuccessfulLogin
 
         ActivityLogger::info(
             'User logged in',
-            ['ip' => request()->ip()],
+            ['ip' => request()->ip(), 'email' => $user->email],
             $user->account,
             $user,
         );

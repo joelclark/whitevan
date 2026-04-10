@@ -1,13 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
-import {
-    Activity,
-    BookOpen,
-    FolderGit2,
-    LayoutGrid,
-    Shield,
-} from 'lucide-react';
+import { Activity, LayoutGrid, Settings, Shield } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -20,6 +13,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as adminUsersIndex } from '@/routes/admin/users';
 import { index as sysopsAccountsIndex } from '@/routes/sysops/accounts';
 import { index as sysopsActivityLogsIndex } from '@/routes/sysops/activity-logs';
 import type { Auth, NavItem } from '@/types';
@@ -32,6 +26,12 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
+const adminNavItem: NavItem = {
+    title: 'Account Settings',
+    href: adminUsersIndex().url,
+    icon: Settings,
+};
+
 const sysopsNavItems: NavItem[] = [
     {
         title: 'Accounts',
@@ -43,19 +43,6 @@ const sysopsNavItems: NavItem[] = [
         href: sysopsActivityLogsIndex().url,
         icon: Activity,
         cacheFor: 0,
-    },
-];
-
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
     },
 ];
 
@@ -84,7 +71,9 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
+                {auth.security_groups.includes('admin') && (
+                    <NavMain items={[adminNavItem]} label="" />
+                )}
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

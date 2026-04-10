@@ -50,17 +50,32 @@ Laravel 13 (PHP 8.4) + React 19 via Inertia.js v3, Tailwind CSS v4, TypeScript, 
 - `Gate::before()` in `AppServiceProvider`: sysops bypass all checks; `Admin` group members get all abilities (`*`).
 - Managed via sysop UI at `/sysops/{account}` — sysops themselves cannot have security group memberships.
 
+### Account Admin
+- Account admins (users with the `Admin` security group) can manage users within their own account.
+- Admin routes live in `routes/admin.php`, controllers in `app/Http/Controllers/Admin/`, pages in `resources/js/pages/admin/`.
+- Routes use `['auth', 'verified', 'can:manage-users']` middleware chain. The `manage-users` ability is implicitly granted to Admin group members via the `*` wildcard in `Gate::before()`.
+- Frontend: `auth.security_groups` shared Inertia prop controls sidebar visibility; admin pages use an `AdminLayout` wrapper.
+- Features: user listing, security group assignment, user activation/deactivation — all scoped to the current account.
+- Defense-in-depth: both `SecurityGroupController` and `UserActivationController` explicitly reject sysop targets, even though sysops have `account_id = null` and would already 404 on the account scope check.
+
+### User Deactivation
+- Sysops and account admins can deactivate/activate users via their respective `UserActivationController`s.
+- `deactivated_at` timestamp on `User` model; helper: `isDeactivated()`. Field is NOT mass-assignable — set via `forceFill()`.
+- Deactivated users are blocked at login (Fortify's `authenticateUsing` callback in `FortifyServiceProvider`).
+- Neither sysops nor admins can deactivate themselves or sysop users.
+
 ### Auth
 Fortify handles authentication (login, registration, password reset, email verification, 2FA). Custom actions live in `app/Actions/Fortify/`. Views are rendered via Inertia (configured in `FortifyServiceProvider`). Registration is currently disabled (returns 404) — users are added by other means.
 
 ### Routes
-- `routes/web.php` — top-level routes, includes `settings.php` and `sysops.php`
+- `routes/web.php` — top-level routes, includes `settings.php`, `admin.php`, and `sysops.php`
 - `routes/settings.php` — profile, password, 2FA, appearance (auth + verified)
+- `routes/admin.php` — account admin routes (auth + verified + can:manage-users)
 - `routes/sysops.php` — sysop admin routes (auth + verified + sysop)
 
 ### Frontend
 - Pages: `resources/js/pages/` — Inertia auto-discovers page components
-- Layouts: `resources/js/layouts/` — `app-layout.tsx` (main), `auth-layout.tsx` (auth), `settings-layout.tsx`, `sysops-layout.tsx`
+- Layouts: `resources/js/layouts/` — `app-layout.tsx` (main), `auth-layout.tsx` (auth), `settings-layout.tsx`, `admin/layout.tsx`, `sysops-layout.tsx`
 - UI components: `resources/js/components/ui/` — Radix UI primitives with Tailwind
 - Wayfinder-generated route helpers: `resources/js/actions/` and `resources/js/routes/` (do not edit manually)
 - Shared Inertia props (user, account, app name) configured in `HandleInertiaRequests` middleware

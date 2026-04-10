@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\ActivityLog;
 use App\Models\User;
 
 test('successful login records an activity log', function () {
@@ -12,8 +13,8 @@ test('successful login records an activity log', function () {
 
     $this->assertAuthenticated();
 
-    $this->assertDatabaseHas('activity_logs', [
-        'type' => 'info',
-        'description' => 'User logged in',
-    ]);
+    $log = ActivityLog::where('description', 'User logged in')->first();
+
+    expect($log)->not->toBeNull();
+    expect($log->metadata)->toMatchArray(['email' => $user->email]);
 });
