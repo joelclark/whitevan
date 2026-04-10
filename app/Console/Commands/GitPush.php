@@ -85,6 +85,14 @@ class GitPush extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * @return list<string>
+     */
+    public static function prefixes(): array
+    {
+        return self::BRANCH_PREFIXES;
+    }
+
     public static function validateBranchName(string $value): ?string
     {
         $prefixes = implode('|', self::BRANCH_PREFIXES);
