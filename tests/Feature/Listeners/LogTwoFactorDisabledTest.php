@@ -12,6 +12,7 @@ test('disabling two-factor authentication records an activity log', function () 
 
     $this->assertDatabaseHas('activity_logs', [
         'type' => 'info',
+        'event' => 'user.two_factor_disabled',
         'description' => 'Two-factor authentication disabled',
         'user_id' => $user->id,
     ]);

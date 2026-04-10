@@ -92,6 +92,7 @@ class User extends Authenticatable
             'two_factor_confirmed_at' => 'datetime',
             'is_sysop' => 'boolean',
             'deactivated_at' => 'datetime',
+            'last_login_at' => 'datetime',
         ];
     }
 }

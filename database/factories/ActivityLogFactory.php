@@ -22,6 +22,7 @@ class ActivityLogFactory extends Factory
     {
         return [
             'type' => fake()->randomElement(ActivityLogType::cases()),
+            'event' => null,
             'description' => fake()->sentence(),
             'metadata' => null,
             'account_id' => null,

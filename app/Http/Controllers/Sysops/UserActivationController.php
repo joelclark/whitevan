@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Sysops;
 
+use App\Enums\ActivityEvent;
 use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\User;
@@ -36,16 +37,14 @@ class UserActivationController extends Controller
             'deactivated_at' => $isDeactivating ? now() : null,
         ])->save();
 
-        $action = $isDeactivating ? 'User deactivated' : 'User activated';
-
-        ActivityLogger::info(
-            $action,
-            [
+        ActivityLogger::event(
+            $isDeactivating ? ActivityEvent::UserDeactivated : ActivityEvent::UserActivated,
+            metadata: [
                 'target_user_id' => $user->id,
                 'target_user_email' => $user->email,
             ],
-            $account,
-            $request->user(),
+            account: $account,
+            user: $request->user(),
         );
 
         return back();

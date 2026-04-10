@@ -3,6 +3,7 @@
 namespace App\Actions\Fortify;
 
 use App\Concerns\PasswordValidationRules;
+use App\Enums\ActivityEvent;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Support\Facades\Validator;
@@ -27,11 +28,11 @@ class ResetUserPassword implements ResetsUserPasswords
             'password' => $input['password'],
         ])->save();
 
-        ActivityLogger::info(
-            'Password reset',
-            ['ip' => request()->ip()],
-            $user->account,
-            $user,
+        ActivityLogger::event(
+            ActivityEvent::UserPasswordReset,
+            metadata: ['ip' => request()->ip()],
+            account: $user->account,
+            user: $user,
         );
     }
 }

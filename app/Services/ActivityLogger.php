@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ActivityEvent;
 use App\Enums\ActivityLogType;
 use App\Models\Account;
 use App\Models\ActivityLog;
@@ -15,8 +16,14 @@ use Illuminate\Support\Facades\Log;
  * is unnecessary, and this works in both HTTP request and queued job contexts.
  *
  * Usage:
- *   ActivityLogger::info('User signed up', ['ip' => $ip], $account, $user);
- *   ActivityLogger::error('Login lockout', ['attempts' => 5], user: $user);
+ *   ActivityLogger::event(ActivityEvent::UserLoggedIn, metadata: [...], user: $user);
+ *   ActivityLogger::info('Ad-hoc note', ['ip' => $ip], $account, $user);
+ *   ActivityLogger::error('Background job failure', ['attempts' => 5], user: $user);
+ *
+ * Prefer event() for anything that should be counted or filtered. info() and
+ * error() remain for ad-hoc diagnostic logging where no stable event key fits;
+ * those rows are written with event = null and are excluded from metric queries
+ * that filter on the event column.
  */
 class ActivityLogger
 {
@@ -31,9 +38,11 @@ class ActivityLogger
         ?array $metadata = null,
         ?Account $account = null,
         ?User $user = null,
+        ?ActivityEvent $event = null,
     ): void {
         ActivityLog::create([
             'type' => $type,
+            'event' => $event,
             'description' => $description,
             'metadata' => $metadata,
             'account_id' => $account?->id,
@@ -41,6 +50,7 @@ class ActivityLogger
         ]);
 
         $context = array_filter([
+            'event' => $event?->value,
             'metadata' => $metadata,
             'account_id' => $account?->id,
             'user_id' => $user?->id,
@@ -50,6 +60,30 @@ class ActivityLogger
             ActivityLogType::Info => Log::info($description, $context),
             ActivityLogType::Error => Log::error($description, $context),
         };
+    }
+
+    /**
+     * Record a typed event. Description defaults to the enum's label() and may
+     * be overridden when extra context (like an interpolated value) is useful
+     * for the human-facing audit UI.
+     *
+     * @param  array<string, mixed>|null  $metadata
+     */
+    public static function event(
+        ActivityEvent $event,
+        ?string $description = null,
+        ?array $metadata = null,
+        ?Account $account = null,
+        ?User $user = null,
+    ): void {
+        static::record(
+            ActivityLogType::Info,
+            $description ?? $event->label(),
+            $metadata,
+            $account,
+            $user,
+            $event,
+        );
     }
 
     /**

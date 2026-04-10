@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Enums\ActivityEvent;
 use App\Services\ActivityLogger;
 use Laravel\Fortify\Events\TwoFactorAuthenticationEnabled;
 
@@ -14,11 +15,11 @@ class LogTwoFactorEnabled
     {
         $user = $event->user;
 
-        ActivityLogger::info(
-            'Two-factor authentication enabled',
-            ['ip' => request()->ip()],
-            $user->account,
-            $user,
+        ActivityLogger::event(
+            ActivityEvent::UserTwoFactorEnabled,
+            metadata: ['ip' => request()->ip()],
+            account: $user->account,
+            user: $user,
         );
     }
 }

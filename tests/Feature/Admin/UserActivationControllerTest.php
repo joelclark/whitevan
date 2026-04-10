@@ -133,7 +133,9 @@ test('activity log is created on deactivation', function () {
             'deactivated' => true,
         ]);
 
-    expect(ActivityLog::where('description', 'User deactivated')->exists())->toBeTrue();
+    expect(ActivityLog::where('event', 'user.deactivated')
+        ->where('description', 'User deactivated')
+        ->exists())->toBeTrue();
 });
 
 test('activity log is created on activation', function () {
@@ -151,7 +153,9 @@ test('activity log is created on activation', function () {
             'deactivated' => false,
         ]);
 
-    expect(ActivityLog::where('description', 'User activated')->exists())->toBeTrue();
+    expect(ActivityLog::where('event', 'user.activated')
+        ->where('description', 'User activated')
+        ->exists())->toBeTrue();
 });
 
 test('no activity log when state unchanged', function () {

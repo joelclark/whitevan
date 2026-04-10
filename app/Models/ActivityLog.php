@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ActivityEvent;
 use App\Enums\ActivityLogType;
 use Database\Factories\ActivityLogFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['type', 'description', 'metadata', 'account_id', 'user_id'])]
+#[Fillable(['type', 'event', 'description', 'metadata', 'account_id', 'user_id'])]
 class ActivityLog extends Model
 {
     /** @use HasFactory<ActivityLogFactory> */
@@ -40,6 +41,7 @@ class ActivityLog extends Model
     {
         return [
             'type' => ActivityLogType::class,
+            'event' => ActivityEvent::class,
             'metadata' => 'array',
         ];
     }

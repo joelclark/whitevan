@@ -64,6 +64,11 @@ Laravel 13 (PHP 8.4) + React 19 via Inertia.js v3, Tailwind CSS v4, TypeScript, 
 - Deactivated users are blocked at login (Fortify's `authenticateUsing` callback in `FortifyServiceProvider`).
 - Neither sysops nor admins can deactivate themselves or sysop users.
 
+### Login Tracking
+- `last_login_at` timestamp on `User` model, updated by `LogSuccessfulLogin` listener via `forceFill()` (NOT mass-assignable, mirrors `deactivated_at`).
+- Use this field for cheap point-in-time queries like "active in the last N days". For historical/time-series questions, query `activity_logs` filtered on `event = 'user.logged_in'`.
+- Caveat: the `Login` event fires on remember-me cookie rehydration too, so this reflects "was authenticated this request" rather than "typed a password just now."
+
 ### Auth
 Fortify handles authentication (login, registration, password reset, email verification, 2FA). Custom actions live in `app/Actions/Fortify/`. Views are rendered via Inertia (configured in `FortifyServiceProvider`). Registration is currently disabled (returns 404) — users are added by other means.
 
@@ -81,14 +86,18 @@ Fortify handles authentication (login, registration, password reset, email verif
 - Shared Inertia props (user, account, app name) configured in `HandleInertiaRequests` middleware
 
 ### Activity Log
-- `ActivityLogger::info(description, metadata?, account?, user?)` / `ActivityLogger::error(...)` — record events inline (not queued).
+- **Preferred API**: `ActivityLogger::event(ActivityEvent::X, description?, metadata?, account?, user?)` — writes a typed event row. Description defaults to `$event->label()`; pass an override only when interpolated context is useful for the human-facing audit UI (e.g. `"Security group added: admin"`).
+- **`ActivityEvent` enum** (`app/Enums/ActivityEvent.php`) is the authoritative registry of every event we record. Adding a new event means adding a case with a `label()`. String values follow `domain.action_past_tense` (e.g. `user.logged_in`, `user.security_group_added`). The `tests/Unit/Enums/ActivityEventTest.php` guardrail enforces both rules.
+- **Enum values are persisted storage**: the `event` column on `activity_logs` is cast to `ActivityEvent`, which throws `ValueError` on unknown values. Never rename or remove an existing case value — only add. Renames require a data migration to update existing rows.
+- **Ad-hoc / diagnostic logging**: `ActivityLogger::info(...)` / `error(...)` remain for cases with no stable event key. Those rows write `event = null` and are excluded from metric queries that filter on the event column. Prefer `event()` for anything that should ever be counted or filtered.
+- **Metric queries** filter on `event`, never `description`. The `(event, created_at)` composite index on `activity_logs` is sized for these queries. Example: "7-day active users" is `where event = 'user.logged_in' and created_at >= now() - 7d` distinct on `user_id`.
 - The `ActivityLog` model does NOT use `BelongsToAccount` — sysops see all events cross-tenant.
-- Enum: `ActivityLogType` (Info, Error) in `app/Enums/`.
-- Sysop screen: `/sysops/activity-logs`.
+- Enum: `ActivityLogType` (Info, Error) in `app/Enums/`. `event()` always writes Info; if a typed error event is ever needed, add `errorEvent()` then.
+- Sysop screen: `/sysops/activity-logs` (currently displays description, not event — event is a backend concern).
 - Auth events are wired via listeners in `app/Listeners/`. Successful logins go to the activity log DB. Failed logins and lockouts log to the application log only (no DB write) to avoid database spam from brute force attacks.
 
 #### When to fire activity log events
-Any feature that changes user or account state, or represents a security-relevant action, **must** fire an activity log event. Examples:
+Any feature that changes user or account state, or represents a security-relevant action, **must** fire an activity log event via `ActivityLogger::event()` with a corresponding `ActivityEvent` case. Add a new enum case if none fits. Examples:
 - **Auth**: login, password reset, 2FA enable/disable (all wired). Failed logins and lockouts go to the application log, not the activity log DB.
 - **Do NOT activity-log**: failed logins, lockouts — these are high-volume under attack and go to the application log instead
 - **Account lifecycle**: sign-up (currently disabled), account creation, account deletion, ownership transfer

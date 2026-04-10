@@ -93,7 +93,9 @@ test('activity log is created when adding a security group', function () {
             'security_groups' => ['admin'],
         ]);
 
-    expect(ActivityLog::where('description', 'Security group added: admin')->exists())->toBeTrue();
+    expect(ActivityLog::where('event', 'user.security_group_added')
+        ->where('description', 'Security group added: admin')
+        ->exists())->toBeTrue();
 });
 
 test('activity log is created when removing a security group', function () {
@@ -111,7 +113,9 @@ test('activity log is created when removing a security group', function () {
             'security_groups' => [],
         ]);
 
-    expect(ActivityLog::where('description', 'Security group removed: admin')->exists())->toBeTrue();
+    expect(ActivityLog::where('event', 'user.security_group_removed')
+        ->where('description', 'Security group removed: admin')
+        ->exists())->toBeTrue();
 });
 
 test('admin users without sysop status get 403', function () {

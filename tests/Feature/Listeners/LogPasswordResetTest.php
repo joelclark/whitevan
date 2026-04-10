@@ -29,6 +29,7 @@ test('password reset records an activity log', function () {
 
     $this->assertDatabaseHas('activity_logs', [
         'type' => 'info',
+        'event' => 'user.password_reset',
         'description' => 'Password reset',
         'user_id' => $user->id,
     ]);

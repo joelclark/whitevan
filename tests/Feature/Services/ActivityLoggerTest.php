@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ActivityEvent;
 use App\Enums\ActivityLogType;
 use App\Models\Account;
 use App\Models\ActivityLog;
@@ -57,4 +58,59 @@ test('record method passes account and user ids', function () {
         'account_id' => $account->id,
         'user_id' => $user->id,
     ]);
+});
+
+test('info and error rows have a null event', function () {
+    ActivityLogger::info('Ad-hoc info');
+    ActivityLogger::error('Ad-hoc error');
+
+    expect(ActivityLog::where('description', 'Ad-hoc info')->first()->event)->toBeNull()
+        ->and(ActivityLog::where('description', 'Ad-hoc error')->first()->event)->toBeNull();
+});
+
+test('event method writes the event column and defaults description to the enum label', function () {
+    ActivityLogger::event(ActivityEvent::UserLoggedIn);
+
+    $log = ActivityLog::where('event', ActivityEvent::UserLoggedIn->value)->first();
+
+    expect($log)->not->toBeNull()
+        ->and($log->event)->toBe(ActivityEvent::UserLoggedIn)
+        ->and($log->description)->toBe('User logged in')
+        ->and($log->type)->toBe(ActivityLogType::Info);
+});
+
+test('event method accepts a description override', function () {
+    ActivityLogger::event(
+        ActivityEvent::UserSecurityGroupAdded,
+        'Security group added: admin',
+        ['security_group' => 'admin'],
+    );
+
+    $log = ActivityLog::where('event', ActivityEvent::UserSecurityGroupAdded->value)->first();
+
+    expect($log->description)->toBe('Security group added: admin')
+        ->and($log->metadata)->toBe(['security_group' => 'admin']);
+});
+
+test('event method passes account and user', function () {
+    $account = Account::factory()->create();
+    $user = $account->owner;
+
+    ActivityLogger::event(ActivityEvent::UserLoggedIn, account: $account, user: $user);
+
+    $this->assertDatabaseHas('activity_logs', [
+        'event' => ActivityEvent::UserLoggedIn->value,
+        'account_id' => $account->id,
+        'user_id' => $user->id,
+    ]);
+});
+
+test('event method writes to application log with the event value', function () {
+    Log::spy();
+
+    ActivityLogger::event(ActivityEvent::UserLoggedIn, metadata: ['ip' => '127.0.0.1']);
+
+    Log::shouldHaveReceived('info')
+        ->with('User logged in', ['event' => 'user.logged_in', 'metadata' => ['ip' => '127.0.0.1']])
+        ->once();
 });

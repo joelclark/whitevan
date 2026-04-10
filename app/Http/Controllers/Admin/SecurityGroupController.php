@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\ActivityEvent;
 use App\Enums\SecurityGroup;
 use App\Http\Controllers\Controller;
 use App\Models\SecurityGroupUser;
@@ -50,7 +51,8 @@ class SecurityGroupController extends Controller
                     'security_group' => $group,
                 ]);
 
-                ActivityLogger::info(
+                ActivityLogger::event(
+                    ActivityEvent::UserSecurityGroupAdded,
                     "Security group added: {$group}",
                     ['security_group' => $group, 'target_user_id' => $user->id, 'target_user_email' => $user->email],
                     $account,
@@ -63,7 +65,8 @@ class SecurityGroupController extends Controller
                     ->where('security_group', $group)
                     ->delete();
 
-                ActivityLogger::info(
+                ActivityLogger::event(
+                    ActivityEvent::UserSecurityGroupRemoved,
                     "Security group removed: {$group}",
                     ['security_group' => $group, 'target_user_id' => $user->id, 'target_user_email' => $user->email],
                     $account,

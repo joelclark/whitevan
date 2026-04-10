@@ -1,0 +1,29 @@
+<?php
+
+namespace App\Enums;
+
+enum ActivityEvent: string
+{
+    case UserLoggedIn = 'user.logged_in';
+    case UserPasswordReset = 'user.password_reset';
+    case UserTwoFactorEnabled = 'user.two_factor_enabled';
+    case UserTwoFactorDisabled = 'user.two_factor_disabled';
+    case UserActivated = 'user.activated';
+    case UserDeactivated = 'user.deactivated';
+    case UserSecurityGroupAdded = 'user.security_group_added';
+    case UserSecurityGroupRemoved = 'user.security_group_removed';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::UserLoggedIn => 'User logged in',
+            self::UserPasswordReset => 'Password reset',
+            self::UserTwoFactorEnabled => 'Two-factor authentication enabled',
+            self::UserTwoFactorDisabled => 'Two-factor authentication disabled',
+            self::UserActivated => 'User activated',
+            self::UserDeactivated => 'User deactivated',
+            self::UserSecurityGroupAdded => 'Security group added',
+            self::UserSecurityGroupRemoved => 'Security group removed',
+        };
+    }
+}

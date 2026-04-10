@@ -1,0 +1,8 @@
+#!/bin/bash
+
+while true; do
+  composer run dev
+  exit_code=$?
+  echo "Process exited with code $exit_code, restarting in 5s..."
+  sleep 5
+done

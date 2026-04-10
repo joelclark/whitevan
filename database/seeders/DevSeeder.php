@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ActivityEvent;
 use App\Enums\ActivityLogType;
 use App\Enums\SecurityGroup;
 use App\Models\Account;
@@ -181,22 +182,26 @@ class DevSeeder extends Seeder
         $eve = User::where('email', 'eve@globex.example.com')->first();
 
         $logs = [
-            ['type' => ActivityLogType::Info, 'description' => 'User signed up', 'metadata' => ['ip' => '192.168.1.10'], 'account_id' => $acme?->id, 'user_id' => $alice?->id],
-            ['type' => ActivityLogType::Info, 'description' => 'User logged in', 'metadata' => ['ip' => '192.168.1.11'], 'account_id' => $acme?->id, 'user_id' => $bob?->id],
-            ['type' => ActivityLogType::Error, 'description' => 'Login lockout after 5 failed attempts', 'metadata' => ['ip' => '10.0.0.5', 'attempts' => 5], 'account_id' => $globex?->id, 'user_id' => $eve?->id],
-            ['type' => ActivityLogType::Info, 'description' => 'User signed up', 'metadata' => ['ip' => '10.0.0.1'], 'account_id' => $globex?->id, 'user_id' => $dan?->id],
-            ['type' => ActivityLogType::Info, 'description' => 'Password reset requested', 'metadata' => ['ip' => '172.16.0.3'], 'account_id' => $acme?->id, 'user_id' => $alice?->id],
-            ['type' => ActivityLogType::Error, 'description' => 'Email verification failed — token expired', 'metadata' => null, 'account_id' => $globex?->id, 'user_id' => $eve?->id],
-            ['type' => ActivityLogType::Info, 'description' => 'Two-factor authentication enabled', 'metadata' => null, 'account_id' => $acme?->id, 'user_id' => $bob?->id],
-            ['type' => ActivityLogType::Error, 'description' => 'Queue worker restarted unexpectedly', 'metadata' => ['signal' => 'SIGTERM'], 'account_id' => null, 'user_id' => null],
-            ['type' => ActivityLogType::Info, 'description' => 'Account created', 'metadata' => null, 'account_id' => $acme?->id, 'user_id' => $alice?->id],
-            ['type' => ActivityLogType::Info, 'description' => 'User logged in', 'metadata' => ['ip' => '10.0.0.2'], 'account_id' => $globex?->id, 'user_id' => $dan?->id],
+            ['event' => ActivityEvent::UserLoggedIn, 'metadata' => ['ip' => '192.168.1.11', 'email' => $bob?->email], 'account_id' => $acme?->id, 'user_id' => $bob?->id],
+            ['event' => ActivityEvent::UserTwoFactorEnabled, 'metadata' => ['ip' => '192.168.1.11'], 'account_id' => $acme?->id, 'user_id' => $bob?->id],
+            ['event' => ActivityEvent::UserPasswordReset, 'metadata' => ['ip' => '172.16.0.3'], 'account_id' => $acme?->id, 'user_id' => $alice?->id],
+            ['event' => ActivityEvent::UserLoggedIn, 'metadata' => ['ip' => '10.0.0.2', 'email' => $dan?->email], 'account_id' => $globex?->id, 'user_id' => $dan?->id],
+            ['event' => ActivityEvent::UserTwoFactorDisabled, 'metadata' => ['ip' => '10.0.0.2'], 'account_id' => $globex?->id, 'user_id' => $dan?->id],
+            ['event' => ActivityEvent::UserDeactivated, 'metadata' => ['target_user_id' => $eve?->id, 'target_user_email' => $eve?->email], 'account_id' => $globex?->id, 'user_id' => $dan?->id],
+            ['event' => ActivityEvent::UserActivated, 'metadata' => ['target_user_id' => $eve?->id, 'target_user_email' => $eve?->email], 'account_id' => $globex?->id, 'user_id' => $dan?->id],
+            ['event' => ActivityEvent::UserSecurityGroupAdded, 'metadata' => ['security_group' => 'admin', 'target_user_id' => $bob?->id, 'target_user_email' => $bob?->email], 'account_id' => $acme?->id, 'user_id' => $alice?->id],
+            ['event' => ActivityEvent::UserSecurityGroupRemoved, 'metadata' => ['security_group' => 'admin', 'target_user_id' => $bob?->id, 'target_user_email' => $bob?->email], 'account_id' => $acme?->id, 'user_id' => $alice?->id],
         ];
 
         foreach ($logs as $log) {
             ActivityLog::firstOrCreate(
-                ['type' => $log['type'], 'description' => $log['description'], 'user_id' => $log['user_id']],
-                ['metadata' => $log['metadata'], 'account_id' => $log['account_id']],
+                ['event' => $log['event'], 'user_id' => $log['user_id']],
+                [
+                    'type' => ActivityLogType::Info,
+                    'description' => $log['event']->label(),
+                    'metadata' => $log['metadata'],
+                    'account_id' => $log['account_id'],
+                ],
             );
         }
     }
