@@ -227,7 +227,8 @@ class DevSeeder extends Seeder
             return;
         }
 
-        $today = CarbonImmutable::now()->startOfDay();
+        $now = CarbonImmutable::now();
+        $today = $now->startOfDay();
 
         for ($daysAgo = 13; $daysAgo >= 0; $daysAgo--) {
             $day = $today->subDays($daysAgo);
@@ -249,6 +250,12 @@ class DevSeeder extends Seeder
                 $hour = 8 + (crc32('hour-'.$user->id.'-'.$day->toDateString()) % 10);
                 $minute = crc32('min-'.$user->id.'-'.$day->toDateString()) % 60;
                 $loggedInAt = $day->setTime($hour, $minute);
+
+                // Never seed timestamps in the future — on "today" the random
+                // hour may land after now(), in which case we skip this user.
+                if ($loggedInAt->greaterThan($now)) {
+                    continue;
+                }
 
                 ActivityLog::firstOrCreate(
                     [

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Account;
+use App\Models\ActivityLog;
 use App\Models\User;
 use Database\Seeders\DevSeeder;
 use Illuminate\Support\Facades\Hash;
@@ -45,6 +46,12 @@ test('dev seeder creates additional accounts with users', function () {
         ->and($acme->users)->toHaveCount(3)
         ->and($globex)->not->toBeNull()
         ->and($globex->users)->toHaveCount(4);
+});
+
+test('dev seeder does not create activity logs in the future', function () {
+    $this->seed(DevSeeder::class);
+
+    expect(ActivityLog::where('created_at', '>', now())->count())->toBe(0);
 });
 
 test('dev seeder creates sysop user', function () {
