@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Contexts\ImpersonationContext;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -15,6 +16,8 @@ class HandleInertiaRequests extends Middleware
      * @var string
      */
     protected $rootView = 'app';
+
+    public function __construct(private ImpersonationContext $impersonationContext) {}
 
     /**
      * Determines the current asset version.
@@ -35,20 +38,31 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        return [
-            ...parent::share($request),
-            'name' => config('app.name'),
-            'auth' => [
-                'user' => $request->user(),
-                'account' => $request->user()?->account,
-                'is_sysop' => (bool) $request->user()?->isSysop(),
-                'security_groups' => $request->user()
+        $user = $request->user();
+        $impersonating = $this->impersonationContext->isImpersonating();
+        $impersonatedAccount = $this->impersonationContext->account();
+
+        $auth = [
+            'user' => $user,
+            'account' => $impersonating ? $impersonatedAccount : $user?->account,
+            'is_sysop' => $impersonating ? false : (bool) $user?->isSysop(),
+            'security_groups' => $impersonating
+                ? ['admin']
+                : ($user
                     ?->loadMissing('securityGroupMemberships')
                     ->securityGroupMemberships
                     ->pluck('security_group')
                     ->map(fn ($group) => $group->value)
-                    ->all() ?? [],
-            ],
+                    ->all() ?? []),
+            'impersonating' => $impersonating && $impersonatedAccount
+                ? ['account' => ['id' => $impersonatedAccount->id, 'name' => $impersonatedAccount->name]]
+                : null,
+        ];
+
+        return [
+            ...parent::share($request),
+            'name' => config('app.name'),
+            'auth' => $auth,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

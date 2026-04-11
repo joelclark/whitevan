@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Contexts\ImpersonationContext;
 use App\Enums\ActivityEvent;
 use App\Enums\ActivityLogType;
 use App\Models\Account;
@@ -40,6 +41,17 @@ class ActivityLogger
         ?User $user = null,
         ?ActivityEvent $event = null,
     ): void {
+        // If this write happens while a sysop is impersonating an account,
+        // stamp the row so auditors can filter on metadata->impersonated
+        // without joining against the start/stop rows. Centralized here so
+        // every current and future call site — event(), info(), error() —
+        // inherits the attribution by construction.
+        if (app(ImpersonationContext::class)->isImpersonating()) {
+            // array_merge, not +, so the context's truth wins over any
+            // caller-supplied 'impersonated' key.
+            $metadata = array_merge($metadata ?? [], ['impersonated' => true]);
+        }
+
         ActivityLog::create([
             'type' => $type,
             'event' => $event,

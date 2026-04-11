@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Contexts\AccountContext;
 use App\Enums\ActivityEvent;
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -11,9 +12,12 @@ use Illuminate\Http\Request;
 
 class UserActivationController extends Controller
 {
-    public function update(Request $request, User $user): RedirectResponse
-    {
-        $account = $request->user()->account;
+    public function update(
+        Request $request,
+        User $user,
+        AccountContext $accountContext,
+    ): RedirectResponse {
+        $account = $accountContext->get();
 
         abort_if($account === null, 403);
         abort_if($user->account_id !== $account->id, 404);

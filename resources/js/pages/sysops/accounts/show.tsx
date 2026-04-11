@@ -12,7 +12,11 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { index as sysopsAccountsIndex, show } from '@/routes/sysops/accounts';
+import {
+    impersonate,
+    index as sysopsAccountsIndex,
+    show,
+} from '@/routes/sysops/accounts';
 import { update as updateActivation } from '@/routes/sysops/accounts/users/activation';
 import { update as updateSecurityGroups } from '@/routes/sysops/accounts/users/security-groups';
 import type { Account, User } from '@/types';
@@ -94,6 +98,18 @@ export default function AccountShow({
         );
     }
 
+    function startImpersonation() {
+        if (
+            !confirm(
+                `You will act as an admin of ${account.name} until you stop.`,
+            )
+        ) {
+            return;
+        }
+
+        router.post(impersonate(account.id).url);
+    }
+
     function toggleActivation(user: AccountUser) {
         router.put(
             updateActivation([account.id, user.id]).url,
@@ -111,6 +127,12 @@ export default function AccountShow({
             <Head title={account.name} />
 
             <div className="space-y-6">
+                <div className="flex justify-end">
+                    <Button onClick={startImpersonation}>
+                        Impersonate as admin
+                    </Button>
+                </div>
+
                 <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
                     <dl className="divide-y text-sm">
                         <div className="flex px-4 py-3">

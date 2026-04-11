@@ -25,6 +25,7 @@ export type Auth = {
     account: Account | null;
     is_sysop: boolean;
     security_groups: string[];
+    impersonating: { account: Pick<Account, 'id' | 'name'> } | null;
 };
 
 export type ActivityLog = {

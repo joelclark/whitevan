@@ -44,10 +44,22 @@ Laravel 13 (PHP 8.4) + React 19 via Inertia.js v3, Tailwind CSS v4, TypeScript, 
 - Frontend: `auth.is_sysop` shared Inertia prop controls sidebar visibility; sysop pages use a `SysopsLayout` wrapper.
 - `UserFactory` has a `->sysop()` state. DevSeeder creates a test sysop at `sysop@example.com` / `sysopsecretpass`.
 
+### Sysop Impersonation
+- A sysop can step into any account as an admin. State lives in the session key `impersonated_account_id` plus a request-scoped `ImpersonationContext` singleton (mirrors `AccountContext` in shape, lives in `app/Contexts/`).
+- `SetAccountContext` middleware reads the session key, re-verifies `isSysop()` from the DB on every request, and sets both `AccountContext` and `ImpersonationContext`. Non-sysops with an injected session key are ignored; stale account ids are cleared.
+- **Middleware priority**: `AppServiceProvider::configureMiddlewarePriority()` hoists `SetAccountContext` to run before `Inertia\Middleware` via `addToMiddlewarePriorityBefore`. Inertia's service provider forces its own middleware right after `StartSession`, which would otherwise run the Inertia `share()` callback before the impersonation context is set. Don't remove that hoist.
+- **Gate authorization** (`AppServiceProvider::configureAuthorization`): real sysops (not impersonating) bypass every check. Impersonating sysops route through the shared `groupsAllow([SecurityGroup::Admin], $ability)` helper — the same matcher used for real memberships. This is the privilege-boundary invariant: "act as Admin," not "unconditional bypass." If Admin's abilities are ever narrowed, impersonation narrows in lockstep automatically. A behavioral-equivalence test in `tests/Feature/Sysops/ImpersonationTest.php` pins this — don't regress it.
+- **EnsureSysop** also 403s when `ImpersonationContext::isImpersonating()` is true, so all `/sysops/*` routes are inaccessible during an impersonation session. The stop endpoint deliberately lives outside the sysop middleware group (`DELETE /impersonate` in `routes/web.php`) so the sysop can always exit.
+- **Settings blocking**: the `not-impersonating` middleware alias (`BlockDuringImpersonation`) is applied to `routes/settings.php` and redirects to `/dashboard` with a flash status. Rationale: a real admin of the impersonated account cannot edit the sysop's identity (profile, password, 2FA), and letting the sysop do so during impersonation produces confused audit rows where an identity change carries the impersonated `account_id`. Any new route that operates on the sysop's own identity should also get this middleware.
+- **Inertia shared props**: while impersonating, `HandleInertiaRequests::share` swaps `auth.is_sysop → false`, `auth.security_groups → ['admin']`, `auth.account → impersonated account`, and adds `auth.impersonating = { account }`. The real user stays in `auth.user`.
+- **Admin controllers resolve `$account` from `AccountContext`**, not `$request->user()->account`. This is what makes impersonation work across the admin UI — the sysop's own `account_id` is null, so reading from the user would 403 immediately. Follow this pattern for any new admin-scope controller.
+- **Routes**: `POST /sysops/{account}/impersonate` (start, sysop group), `DELETE /impersonate` (stop, `auth` only — controller self-enforces `isSysop()`). Both regenerate the session id.
+- **Activity events**: `ActivityEvent::SysopImpersonationStarted` and `SysopImpersonationStopped` mark session boundaries. See the Activity Log section below for the per-action `metadata.impersonated` flag.
+
 ### Security Groups
 - `SecurityGroup` enum in `app/Enums/` defines roles (currently `Admin`). Each case provides `label()`, `description()`, and `abilities()`.
 - Pivot model `SecurityGroupUser` links users to groups. User helpers: `hasSecurityGroup()`, `isAdmin()`.
-- `Gate::before()` in `AppServiceProvider`: sysops bypass all checks; `Admin` group members get all abilities (`*`).
+- `Gate::before()` in `AppServiceProvider`: real sysops bypass all checks; members' groups are matched via the `groupsAllow()` helper (wildcard or exact ability). Impersonating sysops are NOT a blanket bypass — they route through the same helper with `[SecurityGroup::Admin]`, so narrowing Admin's abilities narrows impersonation too. See the Sysop Impersonation section.
 - Managed via sysop UI at `/sysops/{account}` — sysops themselves cannot have security group memberships.
 
 ### Account Admin
@@ -73,10 +85,11 @@ Laravel 13 (PHP 8.4) + React 19 via Inertia.js v3, Tailwind CSS v4, TypeScript, 
 Fortify handles authentication (login, registration, password reset, email verification, 2FA). Custom actions live in `app/Actions/Fortify/`. Views are rendered via Inertia (configured in `FortifyServiceProvider`). Registration is currently disabled (returns 404) — users are added by other means.
 
 ### Routes
-- `routes/web.php` — top-level routes, includes `settings.php`, `admin.php`, and `sysops.php`
-- `routes/settings.php` — profile, password, 2FA, appearance (auth + verified)
+- `routes/web.php` — top-level routes, includes `settings.php`, `admin.php`, and `sysops.php`. Also hosts `DELETE /impersonate` (stop impersonation), which deliberately lives outside the `sysop` middleware group.
+- `routes/settings.php` — profile, password, 2FA, appearance (auth + verified + `not-impersonating`)
 - `routes/admin.php` — account admin routes (auth + verified + can:manage-users)
 - `routes/sysops.php` — sysop admin routes (auth + verified + sysop)
+- Middleware aliases (in `bootstrap/app.php`): `sysop` → `EnsureSysop`, `not-impersonating` → `BlockDuringImpersonation`.
 
 ### Frontend
 - Pages: `resources/js/pages/` — Inertia auto-discovers page components
@@ -92,6 +105,7 @@ Fortify handles authentication (login, registration, password reset, email verif
 - **Ad-hoc / diagnostic logging**: `ActivityLogger::info(...)` / `error(...)` remain for cases with no stable event key. Those rows write `event = null` and are excluded from metric queries that filter on the event column. Prefer `event()` for anything that should ever be counted or filtered.
 - **Metric queries** filter on `event`, never `description`. The `(event, created_at)` composite index on `activity_logs` is sized for these queries. Example: "7-day active users" is `where event = 'user.logged_in' and created_at >= now() - 7d` distinct on `user_id`.
 - The `ActivityLog` model does NOT use `BelongsToAccount` — sysops see all events cross-tenant.
+- **Impersonation attribution is centralized**: `ActivityLogger::record()` automatically merges `metadata.impersonated = true` into every row written while `ImpersonationContext::isImpersonating()` is true (uses `array_merge`, so the context's truth wins over any caller-supplied key). All write paths — `event()`, `info()`, `error()` — inherit this for free. Do NOT re-add manual stamping in controllers; the invariant lives at the logger.
 - Enum: `ActivityLogType` (Info, Error) in `app/Enums/`. `event()` always writes Info; if a typed error event is ever needed, add `errorEvent()` then.
 - Sysop screen: `/sysops/activity-logs` (currently displays description, not event — event is a backend concern).
 - Auth events are wired via listeners in `app/Listeners/`. Successful logins go to the activity log DB. Failed logins and lockouts log to the application log only (no DB write) to avoid database spam from brute force attacks.

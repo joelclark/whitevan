@@ -12,6 +12,8 @@ enum ActivityEvent: string
     case UserDeactivated = 'user.deactivated';
     case UserSecurityGroupAdded = 'user.security_group_added';
     case UserSecurityGroupRemoved = 'user.security_group_removed';
+    case SysopImpersonationStarted = 'sysop.impersonation_started';
+    case SysopImpersonationStopped = 'sysop.impersonation_stopped';
 
     public function label(): string
     {
@@ -24,6 +26,8 @@ enum ActivityEvent: string
             self::UserDeactivated => 'User deactivated',
             self::UserSecurityGroupAdded => 'Security group added',
             self::UserSecurityGroupRemoved => 'Security group removed',
+            self::SysopImpersonationStarted => 'Sysop impersonation started',
+            self::SysopImpersonationStopped => 'Sysop impersonation stopped',
         };
     }
 }

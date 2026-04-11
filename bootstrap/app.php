@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\BlockDuringImpersonation;
 use App\Http\Middleware\EnsureSysop;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\HandleAppearance;
@@ -21,13 +22,14 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'sysop' => EnsureSysop::class,
+            'not-impersonating' => BlockDuringImpersonation::class,
         ]);
 
         $middleware->web(append: [
             HandleAppearance::class,
+            SetAccountContext::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
-            SetAccountContext::class,
             EnsureUserIsActive::class,
         ]);
     })

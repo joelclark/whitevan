@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Contexts\AccountContext;
 use App\Enums\SecurityGroup;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(AccountContext $accountContext): Response
     {
-        $account = $request->user()->account;
+        $account = $accountContext->get();
 
         abort_if($account === null, 403);
 

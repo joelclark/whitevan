@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Contexts\AccountContext;
 use App\Enums\ActivityEvent;
 use App\Enums\SecurityGroup;
 use App\Http\Controllers\Controller;
@@ -15,9 +16,12 @@ use Illuminate\Validation\Rule;
 
 class SecurityGroupController extends Controller
 {
-    public function update(Request $request, User $user): RedirectResponse
-    {
-        $account = $request->user()->account;
+    public function update(
+        Request $request,
+        User $user,
+        AccountContext $accountContext,
+    ): RedirectResponse {
+        $account = $accountContext->get();
 
         abort_if($account === null, 403);
         abort_if($user->account_id !== $account->id, 404);
