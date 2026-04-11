@@ -9,6 +9,7 @@ use App\Models\Account;
 use App\Models\ActivityLog;
 use App\Models\SecurityGroupUser;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 
 class DevSeeder extends Seeder
@@ -203,6 +204,66 @@ class DevSeeder extends Seeder
                     'account_id' => $log['account_id'],
                 ],
             );
+        }
+
+        $this->seedHistoricalLogins();
+    }
+
+    /**
+     * Seed deterministic historical login events across the last two weeks for
+     * every non-sysop user, so the sysop dashboard has something to render.
+     *
+     * Idempotent: keyed on (event, user_id, created_at). The same user/day pair
+     * always produces the same timestamp, so reruns are no-ops.
+     */
+    private function seedHistoricalLogins(): void
+    {
+        $users = User::query()
+            ->where('is_sysop', false)
+            ->whereNotNull('account_id')
+            ->get(['id', 'email', 'account_id']);
+
+        if ($users->isEmpty()) {
+            return;
+        }
+
+        $today = CarbonImmutable::now()->startOfDay();
+
+        for ($daysAgo = 13; $daysAgo >= 0; $daysAgo--) {
+            $day = $today->subDays($daysAgo);
+
+            foreach ($users as $user) {
+                // Each user has a deterministic "activation day" so the rolling
+                // 7-day curve ramps up instead of saturating immediately.
+                $activation = crc32('activate-'.$user->email) % 14;
+                if ($daysAgo > 13 - $activation) {
+                    continue;
+                }
+
+                // ~40% chance per active day, deterministic per user+day.
+                $bucket = crc32($user->id.'-'.$day->toDateString()) % 5;
+                if ($bucket >= 2) {
+                    continue;
+                }
+
+                $hour = 8 + (crc32('hour-'.$user->id.'-'.$day->toDateString()) % 10);
+                $minute = crc32('min-'.$user->id.'-'.$day->toDateString()) % 60;
+                $loggedInAt = $day->setTime($hour, $minute);
+
+                ActivityLog::firstOrCreate(
+                    [
+                        'event' => ActivityEvent::UserLoggedIn,
+                        'user_id' => $user->id,
+                        'created_at' => $loggedInAt,
+                    ],
+                    [
+                        'type' => ActivityLogType::Info,
+                        'description' => ActivityEvent::UserLoggedIn->label(),
+                        'metadata' => ['ip' => '127.0.0.1', 'email' => $user->email, 'seeded' => true],
+                        'account_id' => $user->account_id,
+                    ],
+                );
+            }
         }
     }
 }

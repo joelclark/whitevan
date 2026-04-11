@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as adminUsersIndex } from '@/routes/admin/users';
+import { dashboard as sysopsDashboard } from '@/routes/sysops';
 import { index as sysopsAccountsIndex } from '@/routes/sysops/accounts';
 import { index as sysopsActivityLogsIndex } from '@/routes/sysops/activity-logs';
 import type { Auth, NavItem } from '@/types';
@@ -33,6 +34,11 @@ const adminNavItem: NavItem = {
 };
 
 const sysopsNavItems: NavItem[] = [
+    {
+        title: 'Dashboard',
+        href: sysopsDashboard().url,
+        icon: LayoutGrid,
+    },
     {
         title: 'Accounts',
         href: sysopsAccountsIndex().url,
@@ -64,7 +70,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                {!auth.is_sysop && <NavMain items={mainNavItems} />}
                 {auth.is_sysop && (
                     <NavMain items={sysopsNavItems} label="Sysops" />
                 )}
