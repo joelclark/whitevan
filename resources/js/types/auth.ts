@@ -1,6 +1,5 @@
 export type User = {
     id: number;
-    account_id: number | null;
     name: string;
     email: string;
     avatar?: string;

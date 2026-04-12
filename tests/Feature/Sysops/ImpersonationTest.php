@@ -1,5 +1,6 @@
 <?php
 
+use App\Contexts\AccountContext;
 use App\Contexts\ImpersonationContext;
 use App\Enums\ActivityEvent;
 use App\Enums\SecurityGroup;
@@ -29,6 +30,7 @@ test('admin of another account gets 403 when starting impersonation', function (
     $account = Account::factory()->create();
     $admin = $account->owner;
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -209,8 +211,8 @@ test('admin users page shows only the impersonated account users', function () {
     $sysop = User::factory()->sysop()->create();
     $accountA = Account::factory()->create();
     $accountB = Account::factory()->create();
-    $aUser = User::factory()->for($accountA)->create(['name' => 'Alpha User']);
-    $bUser = User::factory()->for($accountB)->create(['name' => 'Beta User']);
+    $aUser = User::factory()->forAccount($accountA)->create(['name' => 'Alpha User']);
+    $bUser = User::factory()->forAccount($accountB)->create(['name' => 'Beta User']);
 
     $this->actingAs($sysop)
         ->withSession(['impersonated_account_id' => $accountA->id])
@@ -218,9 +220,7 @@ test('admin users page shows only the impersonated account users', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('admin/users/index')
-            ->has('users', 2) // owner of accountA + $aUser
-            ->where('users.0.account_id', $accountA->id)
-            ->where('users.1.account_id', $accountA->id)
+            ->has('users', 2)
         );
 });
 
@@ -250,12 +250,14 @@ test('impersonation authorization mirrors a real admin of the account', function
     // the impersonation branch of Gate::before stays in lockstep.
     $sysop = User::factory()->sysop()->create();
     $account = Account::factory()->create();
-    $admin = User::factory()->for($account)->create();
+    $admin = User::factory()->forAccount($account)->create();
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
 
+    app(AccountContext::class)->set($account);
     app(ImpersonationContext::class)->start($account);
 
     $abilities = [
@@ -288,7 +290,7 @@ test('stale impersonation session id is cleared', function () {
 test('impersonating sysop can update security groups via admin route', function () {
     $sysop = User::factory()->sysop()->create();
     $account = Account::factory()->create();
-    $target = User::factory()->for($account)->create();
+    $target = User::factory()->forAccount($account)->create();
 
     $this->actingAs($sysop)
         ->withSession(['impersonated_account_id' => $account->id])
@@ -308,7 +310,7 @@ test('impersonating sysop can update security groups via admin route', function 
 test('impersonating sysop can deactivate a user via admin route', function () {
     $sysop = User::factory()->sysop()->create();
     $account = Account::factory()->create();
-    $target = User::factory()->for($account)->create();
+    $target = User::factory()->forAccount($account)->create();
 
     $this->actingAs($sysop)
         ->withSession(['impersonated_account_id' => $account->id])
@@ -359,10 +361,11 @@ test('normal admin mutations do not stamp impersonated flag', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
-    $target = User::factory()->for($account)->create();
+    $target = User::factory()->forAccount($account)->create();
 
     $this->actingAs($admin)
         ->put(route('admin.users.activation.update', $target), ['deactivated' => true])

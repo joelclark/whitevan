@@ -89,9 +89,8 @@ class AppServiceProvider extends ServiceProvider
 
             $user->loadMissing('securityGroupMemberships');
 
-            $groups = $user->securityGroupMemberships
-                ->pluck('security_group')
-                ->all();
+            $accountId = app(AccountContext::class)->id();
+            $groups = $user->securityGroupsForAccount($accountId)->all();
 
             if ($this->groupsAllow($groups, $ability)) {
                 return true;

@@ -11,14 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('security_group_user', function (Blueprint $table) {
+        Schema::create('account_user', function (Blueprint $table) {
             $table->id();
             $table->foreignId('account_id')->constrained()->restrictOnDelete();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
-            $table->string('security_group');
             $table->timestamp('created_at')->useCurrent();
 
-            $table->unique(['account_id', 'user_id', 'security_group']);
+            $table->unique(['account_id', 'user_id']);
             $table->index('user_id');
         });
     }
@@ -28,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('security_group_user');
+        Schema::dropIfExists('account_user');
     }
 };

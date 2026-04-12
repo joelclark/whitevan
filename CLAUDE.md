@@ -31,13 +31,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Laravel 13 (PHP 8.4) + React 19 via Inertia.js v3, Tailwind CSS v4, TypeScript, Pest v4.
 
 ### Multi-Tenancy (Account Scoping)
-- `Account` model owns `User`s. Each user belongs to one account.
-- `AccountContext` (singleton) holds the current request's account, set by `SetAccountContext` middleware.
+- Users and Accounts have a many-to-many relationship via the `account_user` pivot table (`AccountUser` pivot model). Users no longer carry `account_id`; membership is tracked exclusively through the pivot.
+- `AccountContext` (singleton) holds the current request's account. `AccountContext::resolveForUser()` reads `session('current_account_id')`, validates membership, and falls back to `User::defaultAccount()` (first pivot row by id). `SetAccountContext` middleware calls the resolver for every authenticated request.
+- `AccountContext::switchTo()` is the public seam for future account-switching UI — validates membership and persists the new selection to session. No route/controller wired yet.
+- `User::accounts()` (BelongsToMany), `User::defaultAccount()`, `User::currentAccount()`, `User::isMemberOf(Account)`. `Account::users()` (BelongsToMany). `Account::owner()` (BelongsTo via `owner_user_id`) is unchanged.
 - Models using the `BelongsToAccount` trait automatically scope all queries to the current account and auto-fill `account_id` on creation.
-- Registration (`CreateNewUser`) creates both a User and Account in a single transaction.
+- Registration (`CreateNewUser`) creates both a User and Account in a single transaction, attaching the user via the pivot.
+- `UserFactory::forAccount(Account)` state attaches via pivot in `afterCreating`. `AccountFactory::configure()` auto-attaches the owner as a member.
 
 ### Sysops (System Operators)
-- Sysops are super-admin users with `is_sysop = true` and `account_id = null` — they operate outside tenant boundaries.
+- Sysops are super-admin users with `is_sysop = true` and no account memberships — they operate outside tenant boundaries.
 - `is_sysop` is NOT mass-assignable; it can only be set via `forceFill()`, tinker, or direct DB access. No UI exists to grant/revoke sysop status.
 - `EnsureSysop` middleware (aliased as `'sysop'`) gates access; sysop routes use `['auth', 'verified', 'sysop']` middleware chain.
 - Sysop routes live in `routes/sysops.php`, controllers in `app/Http/Controllers/Sysops/`, pages in `resources/js/pages/sysops/`.
@@ -52,14 +55,16 @@ Laravel 13 (PHP 8.4) + React 19 via Inertia.js v3, Tailwind CSS v4, TypeScript, 
 - **EnsureSysop** also 403s when `ImpersonationContext::isImpersonating()` is true, so all `/sysops/*` routes are inaccessible during an impersonation session. The stop endpoint deliberately lives outside the sysop middleware group (`DELETE /impersonate` in `routes/web.php`) so the sysop can always exit.
 - **Settings blocking**: the `not-impersonating` middleware alias (`BlockDuringImpersonation`) is applied to `routes/settings.php` and redirects to `/dashboard` with a flash status. Rationale: a real admin of the impersonated account cannot edit the sysop's identity (profile, password, 2FA), and letting the sysop do so during impersonation produces confused audit rows where an identity change carries the impersonated `account_id`. Any new route that operates on the sysop's own identity should also get this middleware.
 - **Inertia shared props**: while impersonating, `HandleInertiaRequests::share` swaps `auth.is_sysop → false`, `auth.security_groups → ['admin']`, `auth.account → impersonated account`, and adds `auth.impersonating = { account }`. The real user stays in `auth.user`.
-- **Admin controllers resolve `$account` from `AccountContext`**, not `$request->user()->account`. This is what makes impersonation work across the admin UI — the sysop's own `account_id` is null, so reading from the user would 403 immediately. Follow this pattern for any new admin-scope controller.
+- **Admin controllers resolve `$account` from `AccountContext`**, not from the user's relationships. This is what makes impersonation work across the admin UI — the sysop has no account memberships, so reading from the user would return nothing. Follow this pattern for any new admin-scope controller.
 - **Routes**: `POST /sysops/{account}/impersonate` (start, sysop group), `DELETE /impersonate` (stop, `auth` only — controller self-enforces `isSysop()`). Both regenerate the session id.
 - **Activity events**: `ActivityEvent::SysopImpersonationStarted` and `SysopImpersonationStopped` mark session boundaries. See the Activity Log section below for the per-action `metadata.impersonated` flag.
 
 ### Security Groups
 - `SecurityGroup` enum in `app/Enums/` defines roles (currently `Admin`). Each case provides `label()`, `description()`, and `abilities()`.
-- Pivot model `SecurityGroupUser` links users to groups. User helpers: `hasSecurityGroup()`, `isAdmin()`.
-- `Gate::before()` in `AppServiceProvider`: real sysops bypass all checks; members' groups are matched via the `groupsAllow()` helper (wildcard or exact ability). Impersonating sysops are NOT a blanket bypass — they route through the same helper with `[SecurityGroup::Admin]`, so narrowing Admin's abilities narrows impersonation too. See the Sysop Impersonation section.
+- Pivot model `SecurityGroupUser` links users to groups **per-account** via `account_id`. The unique constraint is `(account_id, user_id, security_group)` — a user can be Admin in one account and not another. `SecurityGroupUser::create()` always requires `account_id`.
+- User helpers: `securityGroupsForAccount(?int $accountId)` returns groups filtered to the given account (empty collection when null). `hasSecurityGroup()` and `isAdmin()` filter by `AccountContext::id()` automatically.
+- `Gate::before()` in `AppServiceProvider`: real sysops bypass all checks; members' groups are filtered by `AccountContext::id()` then matched via the `groupsAllow()` helper (wildcard or exact ability). Impersonating sysops are NOT a blanket bypass — they route through the same helper with `[SecurityGroup::Admin]`, so narrowing Admin's abilities narrows impersonation too. See the Sysop Impersonation section.
+- `HandleInertiaRequests` shares `auth.security_groups` filtered by the current account context.
 - Managed via sysop UI at `/sysops/{account}` — sysops themselves cannot have security group memberships.
 
 ### Account Admin
@@ -68,7 +73,7 @@ Laravel 13 (PHP 8.4) + React 19 via Inertia.js v3, Tailwind CSS v4, TypeScript, 
 - Routes use `['auth', 'verified', 'can:manage-users']` middleware chain. The `manage-users` ability is implicitly granted to Admin group members via the `*` wildcard in `Gate::before()`.
 - Frontend: `auth.security_groups` shared Inertia prop controls sidebar visibility; admin pages use an `AdminLayout` wrapper.
 - Features: user listing, security group assignment, user activation/deactivation — all scoped to the current account.
-- Defense-in-depth: both `SecurityGroupController` and `UserActivationController` explicitly reject sysop targets, even though sysops have `account_id = null` and would already 404 on the account scope check.
+- Defense-in-depth: both `SecurityGroupController` and `UserActivationController` explicitly reject sysop targets, even though sysops have no account memberships and would already 404 on the `isMemberOf()` check.
 
 ### User Deactivation
 - Sysops and account admins can deactivate/activate users via their respective `UserActivationController`s.

@@ -3,6 +3,7 @@
 namespace App\Actions\Fortify;
 
 use App\Concerns\PasswordValidationRules;
+use App\Contexts\AccountContext;
 use App\Enums\ActivityEvent;
 use App\Models\User;
 use App\Services\ActivityLogger;
@@ -31,7 +32,7 @@ class ResetUserPassword implements ResetsUserPasswords
         ActivityLogger::event(
             ActivityEvent::UserPasswordReset,
             metadata: ['ip' => request()->ip()],
-            account: $user->account,
+            account: app(AccountContext::class)->resolveForUser($user),
             user: $user,
         );
     }

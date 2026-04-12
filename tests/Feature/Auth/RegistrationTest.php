@@ -35,8 +35,8 @@ test('new user registration creates an account', function () {
 
     $user = User::where('email', 'test@example.com')->first();
 
-    expect($user->account_id)->not->toBeNull()
-        ->and($user->account->owner_user_id)->toBe($user->id)
-        ->and($user->account->name)->toBe("Test User's Account")
+    expect($user->accounts)->not->toBeEmpty()
+        ->and($user->defaultAccount()->owner_user_id)->toBe($user->id)
+        ->and($user->defaultAccount()->name)->toBe("Test User's Account")
         ->and(Account::count())->toBe(1);
 });

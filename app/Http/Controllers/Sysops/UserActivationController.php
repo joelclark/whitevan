@@ -14,9 +14,9 @@ class UserActivationController extends Controller
 {
     public function update(Request $request, Account $account, User $user): RedirectResponse
     {
-        abort_if($user->account_id !== $account->id, 404);
+        abort_if(! $user->isMemberOf($account), 404);
 
-        // Defense-in-depth: sysops have account_id = null, so the check above
+        // Defense-in-depth: sysops have no account memberships, so the check above
         // already 404s for them. This guard exists in case that invariant changes.
         abort_if($user->isSysop(), 422, 'Sysop activation is managed separately.');
 

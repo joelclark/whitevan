@@ -18,9 +18,9 @@ class SecurityGroupController extends Controller
 {
     public function update(Request $request, Account $account, User $user): RedirectResponse
     {
-        abort_if($user->account_id !== $account->id, 404);
+        abort_if(! $user->isMemberOf($account), 404);
 
-        // Defense-in-depth: sysops have account_id = null, so the check above
+        // Defense-in-depth: sysops have no account memberships, so the check above
         // already 404s for them. This guard exists in case that invariant changes.
         abort_if($user->isSysop(), 422, 'Sysops cannot have security group memberships.');
 
@@ -31,6 +31,7 @@ class SecurityGroupController extends Controller
 
         $desired = collect($validated['security_groups']);
         $current = $user->securityGroupMemberships()
+            ->where('account_id', $account->id)
             ->pluck('security_group')
             ->map(fn (SecurityGroup $group) => $group->value);
 
@@ -40,6 +41,7 @@ class SecurityGroupController extends Controller
         DB::transaction(function () use ($toAdd, $toRemove, $user, $account, $request) {
             foreach ($toAdd as $group) {
                 SecurityGroupUser::firstOrCreate([
+                    'account_id' => $account->id,
                     'user_id' => $user->id,
                     'security_group' => $group,
                 ]);
@@ -55,6 +57,7 @@ class SecurityGroupController extends Controller
 
             foreach ($toRemove as $group) {
                 $user->securityGroupMemberships()
+                    ->where('account_id', $account->id)
                     ->where('security_group', $group)
                     ->delete();
 

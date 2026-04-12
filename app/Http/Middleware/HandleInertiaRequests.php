@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Contexts\AccountContext;
 use App\Contexts\ImpersonationContext;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -44,14 +45,13 @@ class HandleInertiaRequests extends Middleware
 
         $auth = [
             'user' => $user,
-            'account' => $impersonating ? $impersonatedAccount : $user?->account,
+            'account' => $impersonating ? $impersonatedAccount : app(AccountContext::class)->get(),
             'is_sysop' => $impersonating ? false : (bool) $user?->isSysop(),
             'security_groups' => $impersonating
                 ? ['admin']
                 : ($user
                     ?->loadMissing('securityGroupMemberships')
-                    ->securityGroupMemberships
-                    ->pluck('security_group')
+                    ->securityGroupsForAccount(app(AccountContext::class)->id())
                     ->map(fn ($group) => $group->value)
                     ->all() ?? []),
             'impersonating' => $impersonating && $impersonatedAccount

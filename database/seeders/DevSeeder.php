@@ -89,9 +89,7 @@ class DevSeeder extends Seeder
                 ['name' => $user->name."'s Account"],
             );
 
-            if ($user->account_id !== $account->id) {
-                $user->forceFill(['account_id' => $account->id])->save();
-            }
+            $account->users()->syncWithoutDetaching([$user->id]);
 
             foreach ($userData['members'] ?? [] as $memberData) {
                 $member = User::updateOrCreate(
@@ -99,9 +97,7 @@ class DevSeeder extends Seeder
                     ['name' => $memberData['name'], 'password' => $memberData['password']],
                 );
 
-                if ($member->account_id !== $account->id) {
-                    $member->forceFill(['account_id' => $account->id])->save();
-                }
+                $account->users()->syncWithoutDetaching([$member->id]);
             }
         }
 
@@ -116,9 +112,7 @@ class DevSeeder extends Seeder
                 ['owner_user_id' => $owner->id],
             );
 
-            if ($owner->account_id !== $account->id) {
-                $owner->forceFill(['account_id' => $account->id])->save();
-            }
+            $account->users()->syncWithoutDetaching([$owner->id]);
 
             foreach ($accountData['users'] as $memberData) {
                 $member = User::updateOrCreate(
@@ -126,9 +120,7 @@ class DevSeeder extends Seeder
                     ['name' => $memberData['name'], 'password' => $memberData['password']],
                 );
 
-                if ($member->account_id !== $account->id) {
-                    $member->forceFill(['account_id' => $account->id])->save();
-                }
+                $account->users()->syncWithoutDetaching([$member->id]);
             }
         }
 
@@ -139,7 +131,7 @@ class DevSeeder extends Seeder
             );
 
             if (! $user->is_sysop) {
-                $user->forceFill(['is_sysop' => true, 'account_id' => null])->save();
+                $user->forceFill(['is_sysop' => true])->save();
             }
         }
 
@@ -159,13 +151,18 @@ class DevSeeder extends Seeder
         ];
 
         foreach ($admins as $email) {
-            $user = User::where('email', $email)->first();
+            $user = User::where('email', $email)->with('accounts:id')->first();
 
             if ($user) {
-                SecurityGroupUser::firstOrCreate([
-                    'user_id' => $user->id,
-                    'security_group' => SecurityGroup::Admin,
-                ]);
+                $accountId = $user->accounts->first()?->id;
+
+                if ($accountId) {
+                    SecurityGroupUser::firstOrCreate([
+                        'account_id' => $accountId,
+                        'user_id' => $user->id,
+                        'security_group' => SecurityGroup::Admin,
+                    ]);
+                }
             }
         }
     }
@@ -220,8 +217,9 @@ class DevSeeder extends Seeder
     {
         $users = User::query()
             ->where('is_sysop', false)
-            ->whereNotNull('account_id')
-            ->get(['id', 'email', 'account_id']);
+            ->whereHas('accounts')
+            ->with('accounts:id')
+            ->get(['id', 'email']);
 
         if ($users->isEmpty()) {
             return;
@@ -234,14 +232,11 @@ class DevSeeder extends Seeder
             $day = $today->subDays($daysAgo);
 
             foreach ($users as $user) {
-                // Each user has a deterministic "activation day" so the rolling
-                // 7-day curve ramps up instead of saturating immediately.
                 $activation = crc32('activate-'.$user->email) % 14;
                 if ($daysAgo > 13 - $activation) {
                     continue;
                 }
 
-                // ~40% chance per active day, deterministic per user+day.
                 $bucket = crc32($user->id.'-'.$day->toDateString()) % 5;
                 if ($bucket >= 2) {
                     continue;
@@ -251,8 +246,6 @@ class DevSeeder extends Seeder
                 $minute = crc32('min-'.$user->id.'-'.$day->toDateString()) % 60;
                 $loggedInAt = $day->setTime($hour, $minute);
 
-                // Never seed timestamps in the future — on "today" the random
-                // hour may land after now(), in which case we skip this user.
                 if ($loggedInAt->greaterThan($now)) {
                     continue;
                 }
@@ -267,7 +260,7 @@ class DevSeeder extends Seeder
                         'type' => ActivityLogType::Info,
                         'description' => ActivityEvent::UserLoggedIn->label(),
                         'metadata' => ['ip' => '127.0.0.1', 'email' => $user->email, 'seeded' => true],
-                        'account_id' => $user->account_id,
+                        'account_id' => $user->accounts->first()?->id,
                     ],
                 );
             }

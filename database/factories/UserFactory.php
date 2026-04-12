@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Account;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -30,7 +31,6 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
-            'account_id' => null,
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
@@ -54,7 +54,6 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'is_sysop' => true,
-            'account_id' => null,
         ]);
     }
 
@@ -66,6 +65,14 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'deactivated_at' => now(),
         ]);
+    }
+
+    /**
+     * Attach the user to an existing account after creation.
+     */
+    public function forAccount(Account $account): static
+    {
+        return $this->afterCreating(fn (User $user) => $account->users()->attach($user));
     }
 
     /**

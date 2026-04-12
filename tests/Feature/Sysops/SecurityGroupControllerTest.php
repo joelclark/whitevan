@@ -45,6 +45,7 @@ test('sysop can remove a security group from a user', function () {
     $user = $account->owner;
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $user->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -104,6 +105,7 @@ test('activity log is created when removing a security group', function () {
     $user = $account->owner;
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $user->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -123,6 +125,7 @@ test('admin users without sysop status get 403', function () {
     $admin = $account->owner;
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -139,7 +142,7 @@ test('sysop cannot assign groups to another sysop', function () {
     $targetSysop = User::factory()->sysop()->create();
     $account = Account::factory()->create();
 
-    // Sysops have account_id = null, so they 404 on the account mismatch check
+    // Sysops have no account memberships, so they 404 on the account mismatch check
     $this->actingAs($sysop)
         ->put(route('sysops.accounts.users.security-groups.update', [$account, $targetSysop]), [
             'security_groups' => ['admin'],
@@ -153,6 +156,7 @@ test('idempotent update makes no changes', function () {
     $user = $account->owner;
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $user->id,
         'security_group' => SecurityGroup::Admin,
     ]);

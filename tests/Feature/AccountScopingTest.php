@@ -48,7 +48,7 @@ test('middleware does not set account context for unauthenticated request', func
 });
 
 test('middleware does not set account context for user without account', function () {
-    $user = User::factory()->create(['account_id' => null]);
+    $user = User::factory()->create();
 
     $this->actingAs($user)->get(route('dashboard'));
 
@@ -60,5 +60,5 @@ test('middleware does not set account context for user without account', functio
 test('account factory links owner to the account', function () {
     $account = Account::factory()->create();
 
-    expect($account->owner->account_id)->toBe($account->id);
+    expect($account->owner->isMemberOf($account))->toBeTrue();
 });

@@ -39,8 +39,8 @@ class SetAccountContext
             $request->session()->forget('impersonated_account_id');
         }
 
-        if ($user?->account) {
-            $this->accountContext->set($user->account);
+        if ($user) {
+            $this->accountContext->resolveForUser($user);
         }
 
         return $next($request);

@@ -7,7 +7,6 @@ use Database\Seeders\DevSeeder;
 use Illuminate\Support\Facades\Hash;
 
 test('dev seeder creates dev user', function () {
-    // we don't have to test them all --jc
     $this->seed(DevSeeder::class);
 
     $user = User::where('email', 'dev@example.com')->first();
@@ -21,10 +20,11 @@ test('dev seeder creates account for dev user', function () {
     $this->seed(DevSeeder::class);
 
     $user = User::where('email', 'dev@example.com')->first();
+    $account = $user->defaultAccount();
 
-    expect($user->account)->not->toBeNull()
-        ->and($user->account->name)->toBe("Dev User's Account")
-        ->and($user->account->owner_user_id)->toBe($user->id);
+    expect($account)->not->toBeNull()
+        ->and($account->name)->toBe("Dev User's Account")
+        ->and($account->owner_user_id)->toBe($user->id);
 });
 
 test('dev seeder is idempotent', function () {
@@ -61,5 +61,5 @@ test('dev seeder creates sysop user', function () {
 
     expect($user)->not->toBeNull()
         ->and($user->is_sysop)->toBeTrue()
-        ->and($user->account_id)->toBeNull();
+        ->and($user->accounts)->toBeEmpty();
 });

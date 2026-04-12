@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Contexts\AccountContext;
 use App\Enums\ActivityEvent;
 use App\Services\ActivityLogger;
 use Illuminate\Auth\Events\Login;
@@ -25,7 +26,7 @@ class LogSuccessfulLogin
         ActivityLogger::event(
             ActivityEvent::UserLoggedIn,
             metadata: ['ip' => request()->ip(), 'email' => $user->email],
-            account: $user->account,
+            account: app(AccountContext::class)->resolveForUser($user),
             user: $user,
         );
 

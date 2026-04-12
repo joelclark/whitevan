@@ -28,9 +28,10 @@ test('non-admin users get 403', function () {
 test('admin can deactivate a user', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->create(['account_id' => $account->id]);
+    $user = User::factory()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -47,9 +48,10 @@ test('admin can deactivate a user', function () {
 test('admin can activate a deactivated user', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->deactivated()->create(['account_id' => $account->id]);
+    $user = User::factory()->deactivated()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -68,6 +70,7 @@ test('admin cannot deactivate themselves', function () {
     $admin = $account->owner;
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -87,11 +90,12 @@ test('cannot deactivate a sysop user', function () {
     $sysop = User::factory()->sysop()->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
 
-    // Sysops have account_id = null, so the account scope check 404s first.
+    // Sysops have no account memberships, so the account scope check 404s first.
     // The explicit isSysop() guard is defense-in-depth for if that invariant changes.
     $this->actingAs($admin)
         ->put(route('admin.users.activation.update', $sysop), [
@@ -107,6 +111,7 @@ test('cannot modify users from a different account', function () {
     $otherUser = $otherAccount->owner;
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -121,9 +126,10 @@ test('cannot modify users from a different account', function () {
 test('activity log is created on deactivation', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->create(['account_id' => $account->id]);
+    $user = User::factory()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -141,9 +147,10 @@ test('activity log is created on deactivation', function () {
 test('activity log is created on activation', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->deactivated()->create(['account_id' => $account->id]);
+    $user = User::factory()->deactivated()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -161,9 +168,10 @@ test('activity log is created on activation', function () {
 test('no activity log when state unchanged', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->deactivated()->create(['account_id' => $account->id]);
+    $user = User::factory()->deactivated()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -180,9 +188,10 @@ test('no activity log when state unchanged', function () {
 test('validation rejects non-boolean deactivated field', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->create(['account_id' => $account->id]);
+    $user = User::factory()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -197,9 +206,10 @@ test('validation rejects non-boolean deactivated field', function () {
 test('validation rejects missing deactivated field', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->create(['account_id' => $account->id]);
+    $user = User::factory()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);

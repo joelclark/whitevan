@@ -3,16 +3,18 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Contexts\AccountContext;
 use App\Enums\SecurityGroup;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 #[Fillable(['name', 'email', 'password'])]
@@ -23,11 +25,11 @@ class User extends Authenticatable
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     /**
-     * Get the account this user belongs to.
+     * Get the accounts this user belongs to.
      */
-    public function account(): BelongsTo
+    public function accounts(): BelongsToMany
     {
-        return $this->belongsTo(Account::class);
+        return $this->belongsToMany(Account::class)->using(AccountUser::class);
     }
 
     /**
@@ -36,6 +38,21 @@ class User extends Authenticatable
     public function ownedAccount(): HasOne
     {
         return $this->hasOne(Account::class, 'owner_user_id');
+    }
+
+    public function defaultAccount(): ?Account
+    {
+        return $this->accounts()->orderBy('account_user.id')->first();
+    }
+
+    public function currentAccount(): ?Account
+    {
+        return app(AccountContext::class)->resolveForUser($this);
+    }
+
+    public function isMemberOf(Account $account): bool
+    {
+        return $this->accounts()->whereKey($account->getKey())->exists();
     }
 
     /**
@@ -47,16 +64,30 @@ class User extends Authenticatable
     }
 
     /**
-     * Determine if the user belongs to a security group.
+     * @return Collection<int, SecurityGroup>
      */
-    public function hasSecurityGroup(SecurityGroup $group): bool
+    public function securityGroupsForAccount(?int $accountId): Collection
     {
+        if ($accountId === null) {
+            return collect();
+        }
+
         return $this->securityGroupMemberships
-            ->contains('security_group', $group);
+            ->where('account_id', $accountId)
+            ->pluck('security_group');
     }
 
     /**
-     * Determine if the user is an admin.
+     * Determine if the user belongs to a security group in the current account.
+     */
+    public function hasSecurityGroup(SecurityGroup $group): bool
+    {
+        return $this->securityGroupsForAccount(app(AccountContext::class)->id())
+            ->contains($group);
+    }
+
+    /**
+     * Determine if the user is an admin in the current account.
      */
     public function isAdmin(): bool
     {

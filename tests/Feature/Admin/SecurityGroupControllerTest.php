@@ -28,9 +28,10 @@ test('non-admin users get 403', function () {
 test('admin can add a security group to a user', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->create(['account_id' => $account->id]);
+    $user = User::factory()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -47,14 +48,16 @@ test('admin can add a security group to a user', function () {
 test('admin can remove a security group from another user', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->create(['account_id' => $account->id]);
+    $user = User::factory()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $user->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -73,6 +76,7 @@ test('admin cannot remove their own admin group', function () {
     $admin = $account->owner;
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -92,11 +96,12 @@ test('cannot modify security groups for a sysop user', function () {
     $sysop = User::factory()->sysop()->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
 
-    // Sysops have account_id = null, so the account scope check 404s first.
+    // Sysops have no account memberships, so the account scope check 404s first.
     // The explicit isSysop() guard is defense-in-depth for if that invariant changes.
     $this->actingAs($admin)
         ->put(route('admin.users.security-groups.update', $sysop), [
@@ -112,6 +117,7 @@ test('cannot modify users from a different account', function () {
     $otherUser = $otherAccount->owner;
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -126,9 +132,10 @@ test('cannot modify users from a different account', function () {
 test('activity log is created when adding a security group', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->create(['account_id' => $account->id]);
+    $user = User::factory()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -146,14 +153,16 @@ test('activity log is created when adding a security group', function () {
 test('activity log is created when removing a security group', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->create(['account_id' => $account->id]);
+    $user = User::factory()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $user->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -171,14 +180,16 @@ test('activity log is created when removing a security group', function () {
 test('idempotent update makes no changes', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->create(['account_id' => $account->id]);
+    $user = User::factory()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $user->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -196,9 +207,10 @@ test('idempotent update makes no changes', function () {
 test('validation rejects invalid security group values', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->create(['account_id' => $account->id]);
+    $user = User::factory()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -213,9 +225,10 @@ test('validation rejects invalid security group values', function () {
 test('validation rejects missing security_groups field', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $user = User::factory()->create(['account_id' => $account->id]);
+    $user = User::factory()->forAccount($account)->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);

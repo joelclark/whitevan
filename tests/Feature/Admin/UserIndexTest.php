@@ -24,6 +24,7 @@ test('admin can view the users list', function () {
     $admin = $account->owner;
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -41,11 +42,12 @@ test('admin can view the users list', function () {
 test('users list is scoped to the current account', function () {
     $account = Account::factory()->create();
     $admin = $account->owner;
-    $accountUser = User::factory()->create(['account_id' => $account->id]);
+    $accountUser = User::factory()->forAccount($account)->create();
 
     $otherAccount = Account::factory()->create();
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);
@@ -54,8 +56,6 @@ test('users list is scoped to the current account', function () {
         ->get(route('admin.users.index'))
         ->assertInertia(fn ($page) => $page
             ->has('users', 2)
-            ->where('users.0.account_id', $account->id)
-            ->where('users.1.account_id', $account->id)
         );
 });
 
@@ -64,6 +64,7 @@ test('security group data is included', function () {
     $admin = $account->owner;
 
     SecurityGroupUser::create([
+        'account_id' => $account->id,
         'user_id' => $admin->id,
         'security_group' => SecurityGroup::Admin,
     ]);

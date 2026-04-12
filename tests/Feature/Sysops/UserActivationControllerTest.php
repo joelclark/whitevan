@@ -40,7 +40,7 @@ test('sysop can deactivate a user', function () {
 test('sysop can activate a deactivated user', function () {
     $sysop = User::factory()->sysop()->create();
     $account = Account::factory()->create();
-    $user = User::factory()->deactivated()->create(['account_id' => $account->id]);
+    $user = User::factory()->deactivated()->forAccount($account)->create();
 
     $this->actingAs($sysop)
         ->put(route('sysops.accounts.users.activation.update', [$account, $user]), [
@@ -106,7 +106,7 @@ test('activity log is created on deactivation', function () {
 test('activity log is created on activation', function () {
     $sysop = User::factory()->sysop()->create();
     $account = Account::factory()->create();
-    $user = User::factory()->deactivated()->create(['account_id' => $account->id]);
+    $user = User::factory()->deactivated()->forAccount($account)->create();
 
     $this->actingAs($sysop)
         ->put(route('sysops.accounts.users.activation.update', [$account, $user]), [
@@ -121,7 +121,7 @@ test('activity log is created on activation', function () {
 test('no activity log when state unchanged', function () {
     $sysop = User::factory()->sysop()->create();
     $account = Account::factory()->create();
-    $user = User::factory()->deactivated()->create(['account_id' => $account->id]);
+    $user = User::factory()->deactivated()->forAccount($account)->create();
 
     $this->actingAs($sysop)
         ->put(route('sysops.accounts.users.activation.update', [$account, $user]), [

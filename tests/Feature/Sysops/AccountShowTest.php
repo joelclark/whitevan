@@ -31,8 +31,7 @@ test('account show contains account data and users', function () {
     $sysop = User::factory()->sysop()->create();
     $account = Account::factory()->create();
 
-    $member = User::factory()->create();
-    $member->forceFill(['account_id' => $account->id])->save();
+    $member = User::factory()->forAccount($account)->create();
 
     $this->actingAs($sysop)
         ->get("/sysops/{$account->id}")

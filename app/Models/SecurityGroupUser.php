@@ -8,18 +8,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Pivot model linking users to security groups.
+ * Pivot model linking users to security groups within an account.
  *
- * This table intentionally has no account_id column — security groups are
- * implicitly scoped to accounts through User.account_id. The
- * SecurityGroupController validates account membership before any mutation.
+ * Security groups are scoped per-account via the account_id column.
+ * A user can be Admin in one account but not another.
  */
-#[Fillable(['user_id', 'security_group'])]
+#[Fillable(['account_id', 'user_id', 'security_group'])]
 class SecurityGroupUser extends Model
 {
     protected $table = 'security_group_user';
 
     const UPDATED_AT = null;
+
+    /**
+     * Get the account this membership belongs to.
+     */
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(Account::class);
+    }
 
     /**
      * Get the user this membership belongs to.

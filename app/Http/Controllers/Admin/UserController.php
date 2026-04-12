@@ -17,9 +17,9 @@ class UserController extends Controller
         abort_if($account === null, 403);
 
         $users = $account->users()
-            ->select('id', 'account_id', 'name', 'email', 'deactivated_at', 'created_at')
+            ->select('users.id', 'users.name', 'users.email', 'users.deactivated_at', 'users.created_at')
             ->with('securityGroupMemberships')
-            ->orderBy('name')
+            ->orderBy('users.name')
             ->get();
 
         return Inertia::render('admin/users/index', [

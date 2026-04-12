@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->boolean('is_sysop')->default(false)->after('account_id');
+            $table->boolean('is_sysop')->default(false)->after('remember_token');
         });
     }
 
