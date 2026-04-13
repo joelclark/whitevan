@@ -65,7 +65,9 @@ class ActivityLogger
             'event' => $event?->value,
             'metadata' => $metadata,
             'account_id' => $account?->id,
+            'account_name' => $account?->name,
             'user_id' => $user?->id,
+            'user_email' => $user?->email,
         ]);
 
         match ($type) {

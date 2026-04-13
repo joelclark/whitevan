@@ -114,3 +114,21 @@ test('event method writes to application log with the event value', function () 
         ->with('User logged in', ['event' => 'user.logged_in', 'metadata' => ['ip' => '127.0.0.1']])
         ->once();
 });
+
+test('record method includes account name and user email in log context', function () {
+    Log::spy();
+
+    $account = Account::factory()->create(['name' => 'Acme Inc']);
+    $user = $account->owner;
+
+    ActivityLogger::event(ActivityEvent::UserLoggedIn, account: $account, user: $user);
+
+    Log::shouldHaveReceived('info')
+        ->withArgs(function ($message, $context) use ($account, $user) {
+            return $context['account_id'] === $account->id
+                && $context['account_name'] === 'Acme Inc'
+                && $context['user_id'] === $user->id
+                && $context['user_email'] === $user->email;
+        })
+        ->once();
+});

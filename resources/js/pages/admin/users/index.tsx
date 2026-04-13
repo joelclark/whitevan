@@ -201,10 +201,7 @@ export default function UsersIndex({
                     <div className="flex gap-2">
                         {users.prev_page_url ? (
                             <Button variant="outline" size="sm" asChild>
-                                <Link
-                                    href={users.prev_page_url}
-                                    preserveState
-                                >
+                                <Link href={users.prev_page_url} preserveState>
                                     Previous
                                 </Link>
                             </Button>
@@ -215,10 +212,7 @@ export default function UsersIndex({
                         )}
                         {users.next_page_url ? (
                             <Button variant="outline" size="sm" asChild>
-                                <Link
-                                    href={users.next_page_url}
-                                    preserveState
-                                >
+                                <Link href={users.next_page_url} preserveState>
                                     Next
                                 </Link>
                             </Button>
