@@ -20,7 +20,9 @@ class UserController extends Controller
             ->select('users.id', 'users.name', 'users.email', 'users.deactivated_at', 'users.created_at')
             ->with('securityGroupMemberships')
             ->orderBy('users.name')
-            ->get();
+            ->orderBy('users.id')
+            ->paginate(25)
+            ->withQueryString();
 
         return Inertia::render('admin/users/index', [
             'users' => $users,

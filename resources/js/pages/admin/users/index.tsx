@@ -1,4 +1,4 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,11 +36,21 @@ type AccountUser = Pick<
     security_group_memberships: SecurityGroupMembership[];
 };
 
+type PaginatedUsers = {
+    data: AccountUser[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    prev_page_url: string | null;
+    next_page_url: string | null;
+};
+
 export default function UsersIndex({
     users,
     securityGroups,
 }: {
-    users: AccountUser[];
+    users: PaginatedUsers;
     securityGroups: SecurityGroup[];
 }) {
     const { auth } = usePage().props;
@@ -113,7 +123,7 @@ export default function UsersIndex({
                         </tr>
                     </thead>
                     <tbody>
-                        {users.map((user) => (
+                        {users.data.map((user) => (
                             <tr
                                 key={user.id}
                                 className={`border-b last:border-0 ${user.deactivated_at ? 'opacity-50' : ''}`}
@@ -181,6 +191,45 @@ export default function UsersIndex({
                     </tbody>
                 </table>
             </div>
+
+            {users.last_page > 1 && (
+                <div className="mt-4 flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                        Page {users.current_page} of {users.last_page} (
+                        {users.total} total)
+                    </span>
+                    <div className="flex gap-2">
+                        {users.prev_page_url ? (
+                            <Button variant="outline" size="sm" asChild>
+                                <Link
+                                    href={users.prev_page_url}
+                                    preserveState
+                                >
+                                    Previous
+                                </Link>
+                            </Button>
+                        ) : (
+                            <Button variant="outline" size="sm" disabled>
+                                Previous
+                            </Button>
+                        )}
+                        {users.next_page_url ? (
+                            <Button variant="outline" size="sm" asChild>
+                                <Link
+                                    href={users.next_page_url}
+                                    preserveState
+                                >
+                                    Next
+                                </Link>
+                            </Button>
+                        ) : (
+                            <Button variant="outline" size="sm" disabled>
+                                Next
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            )}
 
             <Dialog
                 open={editingUser !== null}

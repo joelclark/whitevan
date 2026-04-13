@@ -220,7 +220,7 @@ test('admin users page shows only the impersonated account users', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('admin/users/index')
-            ->has('users', 2)
+            ->has('users.data', 2)
         );
 });
 

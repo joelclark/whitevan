@@ -15,6 +15,7 @@ class AccountController extends Controller
         return Inertia::render('sysops/accounts/index', [
             'accounts' => Account::with('owner:id,name,email')
                 ->orderBy('name')
+                ->orderBy('id')
                 ->paginate(25),
         ]);
     }
@@ -23,7 +24,7 @@ class AccountController extends Controller
     {
         $account->load([
             'owner:id,name,email',
-            'users' => fn ($query) => $query->select('users.id', 'users.name', 'users.email', 'users.deactivated_at', 'users.created_at')->with('securityGroupMemberships')->orderBy('users.name'),
+            'users' => fn ($query) => $query->select('users.id', 'users.name', 'users.email', 'users.deactivated_at', 'users.created_at')->with('securityGroupMemberships')->orderBy('users.name')->orderBy('users.id'),
         ]);
 
         return Inertia::render('sysops/accounts/show', [

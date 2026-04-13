@@ -161,11 +161,11 @@ test('admin user list is scoped to the current account', function () {
         ->withSession(['current_account_id' => $accountA->id])
         ->get(route('admin.users.index'))
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('users', 2));
+        ->assertInertia(fn ($page) => $page->has('users.data', 2));
 
     $this->actingAs($user)
         ->withSession(['current_account_id' => $accountB->id])
         ->get(route('admin.users.index'))
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->has('users', 3));
+        ->assertInertia(fn ($page) => $page->has('users.data', 3));
 });

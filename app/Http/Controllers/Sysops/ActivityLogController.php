@@ -43,7 +43,7 @@ class ActivityLogController extends Controller
         }
 
         $sortDirection = $request->string('sort', 'latest')->toString() === 'oldest' ? 'asc' : 'desc';
-        $query->orderBy('created_at', $sortDirection);
+        $query->orderBy('created_at', $sortDirection)->orderBy('id', $sortDirection);
 
         return Inertia::render('sysops/activity-logs/index', [
             'activityLogs' => $query->paginate(50)->withQueryString(),
@@ -54,7 +54,7 @@ class ActivityLogController extends Controller
                 'sort' => $request->string('sort', 'latest')->toString(),
                 'period' => $period,
             ],
-            'accounts' => Inertia::optional(fn () => Account::orderBy('name')->get(['id', 'name'])),
+            'accounts' => Inertia::optional(fn () => Account::orderBy('name')->orderBy('id')->get(['id', 'name'])),
         ]);
     }
 }

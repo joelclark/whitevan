@@ -30,13 +30,14 @@ class ActiveUserMetrics
             ->where('event', ActivityEvent::UserLoggedIn)
             ->whereNotNull('user_id')
             ->whereBetween('created_at', [$rangeStart, $rangeEnd])
-            ->get(['user_id', 'created_at']);
+            ->selectRaw('DATE(created_at) as day, user_id')
+            ->distinct()
+            ->get();
 
         /** @var array<string, array<int, true>> $byDay */
         $byDay = [];
         foreach ($rows as $row) {
-            $day = $row->created_at->toDateString();
-            $byDay[$day][$row->user_id] = true;
+            $byDay[$row->day][$row->user_id] = true;
         }
 
         $series = [];

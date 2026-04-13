@@ -55,7 +55,8 @@ test('users list is scoped to the current account', function () {
     $this->actingAs($admin)
         ->get(route('admin.users.index'))
         ->assertInertia(fn ($page) => $page
-            ->has('users', 2)
+            ->has('users.data', 2)
+            ->has('users.current_page')
         );
 });
 
