@@ -22,6 +22,7 @@ type Props = {
 export default function DeleteCustomerDialog({ customer, trigger }: Props) {
     const [open, setOpen] = useState(false);
     const fullName = `${customer.first_name} ${customer.last_name}`.trim();
+    const hasEstimates = (customer.estimates_count ?? 0) > 0;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -29,8 +30,11 @@ export default function DeleteCustomerDialog({ customer, trigger }: Props) {
             <DialogContent>
                 <DialogTitle>Delete {fullName}?</DialogTitle>
                 <DialogDescription>
-                    This customer will be moved to the archive. Their data is
-                    retained and can be restored by an administrator.
+                    {hasEstimates
+                        ? `This customer has ${customer.estimates_count} estimate${
+                              customer.estimates_count === 1 ? '' : 's'
+                          }. Delete the estimates first before removing the customer.`
+                        : 'This customer will be moved to the archive. Their data is retained and can be restored by an administrator.'}
                 </DialogDescription>
 
                 <Form
@@ -48,7 +52,7 @@ export default function DeleteCustomerDialog({ customer, trigger }: Props) {
                             <Button
                                 variant="destructive"
                                 type="submit"
-                                disabled={processing}
+                                disabled={processing || hasEstimates}
                             >
                                 Delete customer
                             </Button>

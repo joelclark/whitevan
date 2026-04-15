@@ -9,6 +9,7 @@ use App\Http\Middleware\SetAccountContext;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -45,17 +46,28 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Ensure SetAccountContext runs before Inertia's middleware so the
-     * Inertia share() callback reflects the current account/impersonation
-     * state. Inertia's service provider hoists its middleware right after
-     * StartSession in the priority list, which would otherwise run before
-     * SetAccountContext regardless of the bootstrap/app.php order.
+     * Hoist SetAccountContext so tenancy is active before implicit route
+     * model binding and before Inertia's share() callback runs.
+     *
+     * Two things need to happen:
+     *
+     * 1. SetAccountContext must run *before* SubstituteBindings. Otherwise
+     *    implicit binding (e.g. {customer} in the URL) resolves the model
+     *    with no account context set, the BelongsToAccount global scope
+     *    has nothing to filter on, and cross-tenant URLs successfully
+     *    return another tenant's record instead of 404.
+     *
+     * 2. SetAccountContext must also run before Inertia's middleware so
+     *    share() can reflect the current account/impersonation state.
+     *    Inertia's service provider hoists its own middleware right after
+     *    StartSession, which would otherwise run before SetAccountContext.
      */
     protected function configureMiddlewarePriority(): void
     {
         $kernel = $this->app->make(Kernel::class);
 
         if (method_exists($kernel, 'addToMiddlewarePriorityBefore')) {
+            $kernel->addToMiddlewarePriorityBefore(SubstituteBindings::class, SetAccountContext::class);
             $kernel->addToMiddlewarePriorityBefore(Middleware::class, SetAccountContext::class);
         }
     }

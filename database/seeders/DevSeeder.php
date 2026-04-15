@@ -4,9 +4,11 @@ namespace Database\Seeders;
 
 use App\Enums\ActivityEvent;
 use App\Enums\ActivityLogType;
+use App\Enums\AiAgentKind;
 use App\Enums\SecurityGroup;
 use App\Models\Account;
 use App\Models\ActivityLog;
+use App\Models\AiAgentSetting;
 use App\Models\Customer;
 use App\Models\SecurityGroupUser;
 use App\Models\User;
@@ -139,6 +141,25 @@ class DevSeeder extends Seeder
         $this->seedSecurityGroups();
         $this->seedActivityLogs();
         $this->seedCustomers();
+        $this->seedAiAgentSettings();
+    }
+
+    /**
+     * Seed the editable AI agent configuration rows. Must be idempotent —
+     * reruns should not overwrite a sysop's edits.
+     */
+    private function seedAiAgentSettings(): void
+    {
+        foreach (AiAgentKind::cases() as $kind) {
+            AiAgentSetting::firstOrCreate(
+                ['kind' => $kind->value],
+                [
+                    'label' => $kind->label(),
+                    'description' => $kind->description(),
+                    'system_prompt' => $kind->defaultSystemPrompt(),
+                ],
+            );
+        }
     }
 
     /**

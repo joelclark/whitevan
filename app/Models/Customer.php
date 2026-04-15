@@ -7,6 +7,7 @@ use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -48,5 +49,13 @@ class Customer extends Model
         return [
             'last_accessed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * @return HasMany<Estimate, $this>
+     */
+    public function estimates(): HasMany
+    {
+        return $this->hasMany(Estimate::class);
     }
 }

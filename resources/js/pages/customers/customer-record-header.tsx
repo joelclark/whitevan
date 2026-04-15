@@ -1,4 +1,4 @@
-import { ChevronDown, Mail, MoreHorizontal, Phone } from 'lucide-react';
+import { FilePlus2, Mail, MoreHorizontal, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -6,6 +6,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import UploadEstimateDialog from '@/pages/estimates/upload-estimate-dialog';
 import type { Customer } from '@/types';
 import DeleteCustomerDialog from './delete-customer-dialog';
 
@@ -52,19 +53,28 @@ export default function CustomerRecordHeader({ customer }: Props) {
             </div>
 
             <div className="flex flex-shrink-0 items-center gap-2">
-                <Button
-                    variant="default"
-                    disabled
-                    title="Coming soon"
-                    type="button"
-                >
-                    New Estimate
-                    <ChevronDown className="ml-1 h-4 w-4" />
-                </Button>
+                <UploadEstimateDialog
+                    customer={customer}
+                    trigger={
+                        <Button
+                            variant="default"
+                            type="button"
+                            className="h-12 px-5 text-base"
+                        >
+                            <FilePlus2 className="mr-2 h-4 w-4" />
+                            New Estimate
+                        </Button>
+                    }
+                />
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon" type="button">
-                            <MoreHorizontal className="h-4 w-4" />
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            type="button"
+                            className="h-12 w-12"
+                        >
+                            <MoreHorizontal className="h-5 w-5" />
                             <span className="sr-only">More actions</span>
                         </Button>
                     </DropdownMenuTrigger>

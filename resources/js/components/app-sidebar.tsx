@@ -1,5 +1,13 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Activity, Contact, LayoutGrid, Settings, Shield } from 'lucide-react';
+import {
+    Activity,
+    Bot,
+    Contact,
+    FileText,
+    LayoutGrid,
+    Settings,
+    Shield,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -15,9 +23,11 @@ import {
 import { dashboard } from '@/routes';
 import { index as adminUsersIndex } from '@/routes/admin/users';
 import { index as customersIndex } from '@/routes/customers';
+import { index as estimatesIndex } from '@/routes/estimates';
 import { dashboard as sysopsDashboard } from '@/routes/sysops';
 import { index as sysopsAccountsIndex } from '@/routes/sysops/accounts';
 import { index as sysopsActivityLogsIndex } from '@/routes/sysops/activity-logs';
+import { index as sysopsAiAgentsIndex } from '@/routes/sysops/ai-agents';
 import type { Auth, NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -30,6 +40,11 @@ const mainNavItems: NavItem[] = [
         title: 'Customers',
         href: customersIndex(),
         icon: Contact,
+    },
+    {
+        title: 'Estimates',
+        href: estimatesIndex(),
+        icon: FileText,
     },
 ];
 
@@ -55,6 +70,11 @@ const sysopsNavItems: NavItem[] = [
         href: sysopsActivityLogsIndex().url,
         icon: Activity,
         cacheFor: 0,
+    },
+    {
+        title: 'AI Agents',
+        href: sysopsAiAgentsIndex().url,
+        icon: Bot,
     },
 ];
 
