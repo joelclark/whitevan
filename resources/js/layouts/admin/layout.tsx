@@ -20,7 +20,7 @@ export default function AdminLayout({ children }: PropsWithChildren) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
 
     return (
-        <div className="px-4 py-6">
+        <>
             <Heading
                 title="Account Settings"
                 description="Manage your account settings and users"
@@ -59,6 +59,6 @@ export default function AdminLayout({ children }: PropsWithChildren) {
                     <section className="space-y-6">{children}</section>
                 </div>
             </div>
-        </div>
+        </>
     );
 }

@@ -15,7 +15,9 @@ export default function AppSidebarLayout({
             <AppContent variant="sidebar" className="overflow-x-hidden">
                 <ImpersonationBanner />
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
-                {children}
+                <div className="flex h-full flex-1 flex-col px-4 py-6">
+                    {children}
+                </div>
             </AppContent>
         </AppShell>
     );

@@ -7,6 +7,7 @@ use App\Enums\ActivityLogType;
 use App\Enums\SecurityGroup;
 use App\Models\Account;
 use App\Models\ActivityLog;
+use App\Models\Customer;
 use App\Models\SecurityGroupUser;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -137,6 +138,7 @@ class DevSeeder extends Seeder
 
         $this->seedSecurityGroups();
         $this->seedActivityLogs();
+        $this->seedCustomers();
     }
 
     /**
@@ -204,6 +206,165 @@ class DevSeeder extends Seeder
         }
 
         $this->seedHistoricalLogins();
+    }
+
+    /**
+     * Seed sample customers for the dev user's account, covering the mix of
+     * states we want visible in local UI: fully populated, minimal-required,
+     * recently viewed (sorted to the top), older views, never viewed, and an
+     * archived (soft-deleted) row.
+     */
+    private function seedCustomers(): void
+    {
+        $devUser = User::where('email', 'dev@example.com')->first();
+        $account = $devUser?->ownedAccount;
+
+        if ($account === null) {
+            return;
+        }
+
+        $now = CarbonImmutable::now();
+
+        $customers = [
+            [
+                'first_name' => 'Zephyr',
+                'last_name' => 'Zimmerman',
+                'company' => 'Zimmerman & Sons Plumbing',
+                'email' => 'zephyr@zimmermanplumbing.example.com',
+                'phone' => '(555) 010-2200',
+                'address_line_1' => '4201 Industrial Blvd',
+                'address_line_2' => 'Suite 12',
+                'city' => 'Austin',
+                'state' => 'TX',
+                'zip' => '78702',
+                'notes' => 'Long-time customer. Prefers text messages for scheduling. Has a standing annual maintenance agreement.',
+                'last_accessed_at' => $now->subMinutes(15),
+                'archived' => false,
+            ],
+            [
+                'first_name' => 'Hannah',
+                'last_name' => 'Okonkwo',
+                'company' => 'Bright Horizons Daycare',
+                'email' => 'hannah.o@brighthorizons.example.com',
+                'phone' => '(555) 010-4412',
+                'address_line_1' => '88 Oak Street',
+                'address_line_2' => null,
+                'city' => 'Portland',
+                'state' => 'OR',
+                'zip' => '97205',
+                'notes' => 'Needs 24-hour advance notice for on-site work (children present).',
+                'last_accessed_at' => $now->subHours(6),
+                'archived' => false,
+            ],
+            [
+                'first_name' => 'Marcus',
+                'last_name' => 'Delgado',
+                'company' => null,
+                'email' => 'marcus.delgado@example.com',
+                'phone' => '(555) 010-7788',
+                'address_line_1' => '122 Elm Avenue',
+                'address_line_2' => 'Apt 4B',
+                'city' => 'Denver',
+                'state' => 'CO',
+                'zip' => '80202',
+                'notes' => null,
+                'last_accessed_at' => $now->subDays(3),
+                'archived' => false,
+            ],
+            [
+                'first_name' => 'Priya',
+                'last_name' => 'Raman',
+                'company' => 'Raman Consulting LLC',
+                'email' => 'priya@ramanconsulting.example.com',
+                'phone' => null,
+                'address_line_1' => null,
+                'address_line_2' => null,
+                'city' => null,
+                'state' => null,
+                'zip' => null,
+                'notes' => 'Email-only contact preference.',
+                'last_accessed_at' => $now->subWeeks(1),
+                'archived' => false,
+            ],
+            [
+                'first_name' => 'Alex',
+                'last_name' => 'Astro',
+                'company' => null,
+                'email' => null,
+                'phone' => '(555) 010-9911',
+                'address_line_1' => '7 Sunset Lane',
+                'address_line_2' => null,
+                'city' => 'Santa Monica',
+                'state' => 'CA',
+                'zip' => '90401',
+                'notes' => 'Phone-only lead from trade show.',
+                'last_accessed_at' => null,
+                'archived' => false,
+            ],
+            [
+                'first_name' => 'Brenda',
+                'last_name' => 'Beckett',
+                'company' => 'Beckett Properties',
+                'email' => null,
+                'phone' => null,
+                'address_line_1' => null,
+                'address_line_2' => null,
+                'city' => null,
+                'state' => null,
+                'zip' => null,
+                'notes' => null,
+                'last_accessed_at' => null,
+                'archived' => false,
+            ],
+            [
+                'first_name' => 'Charlie',
+                'last_name' => 'Chavez',
+                'company' => 'Chavez Auto Body',
+                'email' => 'charlie@chavezauto.example.com',
+                'phone' => '(555) 010-3344',
+                'address_line_1' => '915 Main Street',
+                'address_line_2' => null,
+                'city' => 'Albuquerque',
+                'state' => 'NM',
+                'zip' => '87102',
+                'notes' => 'Referred by Zimmerman. Fleet of 4 service vehicles.',
+                'last_accessed_at' => null,
+                'archived' => false,
+            ],
+            [
+                'first_name' => 'Echo',
+                'last_name' => 'Edwards',
+                'company' => 'Edwards & Co',
+                'email' => 'echo@edwardsco.example.com',
+                'phone' => '(555) 010-6677',
+                'address_line_1' => '300 Lakeshore Drive',
+                'address_line_2' => null,
+                'city' => 'Chicago',
+                'state' => 'IL',
+                'zip' => '60601',
+                'notes' => 'Relationship closed — kept for historical reference.',
+                'last_accessed_at' => $now->subMonths(2),
+                'archived' => true,
+            ],
+        ];
+
+        foreach ($customers as $data) {
+            $archived = $data['archived'];
+            unset($data['archived']);
+
+            $customer = Customer::withTrashed()->updateOrCreate(
+                [
+                    'account_id' => $account->id,
+                    'first_name' => $data['first_name'],
+                    'last_name' => $data['last_name'],
+                ],
+                [...$data, 'account_id' => $account->id],
+            );
+
+            if ($archived && $customer->deleted_at === null) {
+                $customer->delete();
+            }
+        }
     }
 
     /**

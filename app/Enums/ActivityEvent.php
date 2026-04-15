@@ -14,6 +14,9 @@ enum ActivityEvent: string
     case UserSecurityGroupRemoved = 'user.security_group_removed';
     case SysopImpersonationStarted = 'sysop.impersonation_started';
     case SysopImpersonationStopped = 'sysop.impersonation_stopped';
+    case CustomerCreated = 'customer.created';
+    case CustomerUpdated = 'customer.updated';
+    case CustomerDeleted = 'customer.deleted';
 
     public function label(): string
     {
@@ -28,6 +31,9 @@ enum ActivityEvent: string
             self::UserSecurityGroupRemoved => 'Security group removed',
             self::SysopImpersonationStarted => 'Sysop impersonation started',
             self::SysopImpersonationStopped => 'Sysop impersonation stopped',
+            self::CustomerCreated => 'Customer created',
+            self::CustomerUpdated => 'Customer updated',
+            self::CustomerDeleted => 'Customer deleted',
         };
     }
 }
