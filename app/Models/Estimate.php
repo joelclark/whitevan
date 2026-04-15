@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\BelongsToAccount;
 use App\Enums\EstimateStatus;
+use App\Enums\Trade;
 use Database\Factories\EstimateFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
     'customer_id',
+    'trade',
     'title',
     'pdf_path',
     'pdf_original_filename',
@@ -37,6 +39,7 @@ class Estimate extends Model
     protected function casts(): array
     {
         return [
+            'trade' => Trade::class,
             'status' => EstimateStatus::class,
             'total_sqft' => 'integer',
             'interview_answers' => AsArrayObject::class,

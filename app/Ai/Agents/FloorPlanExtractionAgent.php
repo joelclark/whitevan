@@ -5,8 +5,12 @@ namespace App\Ai\Agents;
 use App\Models\AiAgentSetting;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Laravel\Ai\Attributes\Model;
+use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 
 /**
@@ -17,7 +21,9 @@ use Laravel\Ai\Promptable;
  * from the example that the model sees. Any change to the response contract
  * has to land in code.
  */
-class FloorPlanExtractionAgent implements Agent, HasStructuredOutput
+#[Provider(Lab::OpenAI)]
+#[Model('gpt-5.4-mini')]
+class FloorPlanExtractionAgent implements Agent, HasProviderOptions, HasStructuredOutput
 {
     use Promptable;
 
@@ -40,6 +46,17 @@ class FloorPlanExtractionAgent implements Agent, HasStructuredOutput
 JSON;
 
     public function __construct(private readonly AiAgentSetting $setting) {}
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function providerOptions(Lab|string $provider): array
+    {
+        return match ($provider) {
+            Lab::OpenAI => ['reasoning' => ['effort' => 'high']],
+            default => [],
+        };
+    }
 
     public function instructions(): string
     {

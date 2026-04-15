@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Contexts\AccountContext;
 use App\Enums\ActivityEvent;
 use App\Enums\EstimateStatus;
+use App\Enums\Trade;
 use App\Http\Requests\EstimateStoreRequest;
 use App\Http\Requests\EstimateUpdateRequest;
+use App\Interviews\InterviewDispatcher;
 use App\Jobs\ProcessEstimatePdfJob;
 use App\Models\Customer;
 use App\Models\Estimate;
@@ -78,6 +80,9 @@ class EstimateController extends Controller
 
         $estimate = Estimate::create([
             'customer_id' => $customer->id,
+            // Flooring is the only trade today. When trade selection lands in
+            // the upload form, read it from $request instead of hard-coding.
+            'trade' => Trade::Flooring,
             'pdf_path' => $path,
             'pdf_original_filename' => $file->getClientOriginalName(),
             'status' => EstimateStatus::Processing,
@@ -106,8 +111,33 @@ class EstimateController extends Controller
     {
         $estimate->load(['customer', 'rooms']);
 
+        // Normalize interview_answers for Inertia: AsArrayObject flattens
+        // empty inner maps to [], but the frontend type expects objects.
+        // Cast inner maps to stdClass at the JSON boundary so empties
+        // serialize as {} instead of [].
+        $serialized = $estimate->toArray();
+        $raw = $estimate->interview_answers;
+        $rooms = $raw['rooms'] ?? [];
+        $longTail = $raw['long_tail'] ?? [];
+        $serialized['interview_answers'] = [
+            'rooms' => (object) ($rooms instanceof \ArrayObject ? $rooms->getArrayCopy() : (array) $rooms),
+            'long_tail' => (object) ($longTail instanceof \ArrayObject ? $longTail->getArrayCopy() : (array) $longTail),
+        ];
+
+        $interviewProps = null;
+        if ($estimate->status === EstimateStatus::Ready) {
+            $interview = InterviewDispatcher::for($estimate);
+            $next = $interview->nextQuestionFor($estimate);
+            $interviewProps = [
+                'next_question' => $next?->toArray(),
+                'is_complete' => $next === null,
+                'catalog' => $interview->catalog(),
+            ];
+        }
+
         return Inertia::render('estimates/edit', [
-            'estimate' => $estimate,
+            'estimate' => $serialized,
+            'interview' => $interviewProps,
         ]);
     }
 
@@ -123,8 +153,6 @@ class EstimateController extends Controller
 
         $estimate->fill([
             'title' => $validated['title'] ?? $estimate->title,
-            'interview_answers' => $validated['interview_answers'] ?? $estimate->interview_answers->getArrayCopy(),
-            'line_item_prices' => $validated['line_item_prices'] ?? $estimate->line_item_prices->getArrayCopy(),
         ]);
 
         if ($estimate->isDirty()) {
@@ -159,9 +187,16 @@ class EstimateController extends Controller
         // UI confirms before sending that through.
         abort_if($estimate->status === EstimateStatus::Processing, 409);
 
+        // Retry regenerates rooms with new ids, so any stored room-scoped
+        // answers in interview_answers would orphan. Reset to a clean
+        // nested shape so the interview restarts from scratch.
         $estimate->forceFill([
             'status' => EstimateStatus::Processing,
             'agent_errors' => [],
+            'interview_answers' => [
+                'rooms' => new \ArrayObject,
+                'long_tail' => new \ArrayObject,
+            ],
         ])->save();
 
         ProcessEstimatePdfJob::dispatch($estimate->id);

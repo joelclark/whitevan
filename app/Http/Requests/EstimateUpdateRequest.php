@@ -27,10 +27,6 @@ class EstimateUpdateRequest extends FormRequest
     {
         return [
             'title' => ['nullable', 'string', 'max:255'],
-            'interview_answers' => ['nullable', 'array'],
-            'interview_answers.*' => ['nullable', 'string', 'max:5000'],
-            'line_item_prices' => ['nullable', 'array'],
-            'line_item_prices.*' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }
