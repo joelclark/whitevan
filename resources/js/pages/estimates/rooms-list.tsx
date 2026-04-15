@@ -41,9 +41,7 @@ export default function RoomsList({
     const action = EstimateInterviewController.store.form(estimate.id);
     const pending = interview?.next_question ?? null;
     const floorplanStatus = estimate.floorplan_assets_status;
-    const previewByPage = new Map(
-        floorplanPages.map((p) => [p.page, p]),
-    );
+    const previewByPage = new Map(floorplanPages.map((p) => [p.page, p]));
     const pendingRoomId = pending?.phase === 'room' ? pending.room_id : null;
     const longTailActive = pending?.phase === 'long_tail';
     const isComplete = interview?.is_complete ?? false;
@@ -54,12 +52,12 @@ export default function RoomsList({
     // current room sits at a later position.
     const doneThroughRoomIndex = (() => {
         if (isComplete || longTailActive) {
-return Infinity;
-}
+            return Infinity;
+        }
 
         if (pending?.phase === 'room') {
-return pending.room_index - 1;
-}
+            return pending.room_index - 1;
+        }
 
         return -1;
     })();
@@ -87,9 +85,7 @@ return pending.room_index - 1;
                 <ProjectWideCard
                     catalog={interview.catalog.long_tail}
                     answers={answers.long_tail}
-                    pendingQuestionKey={
-                        longTailActive ? pending!.key : null
-                    }
+                    pendingQuestionKey={longTailActive ? pending!.key : null}
                     isActive={longTailActive}
                     isDone={isComplete}
                     action={action}
@@ -222,9 +218,7 @@ function FloorplanThumbnail({
             <div className="flex flex-col items-center gap-1 text-xs">
                 <ImageOff className="h-6 w-6" />
                 <span>
-                    {status === 'failed'
-                        ? 'Render failed'
-                        : 'No preview'}
+                    {status === 'failed' ? 'Render failed' : 'No preview'}
                 </span>
             </div>
         </div>
