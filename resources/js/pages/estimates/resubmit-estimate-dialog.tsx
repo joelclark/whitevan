@@ -1,7 +1,8 @@
 import { Form } from '@inertiajs/react';
+import { RefreshCw } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import CustomerController from '@/actions/App/Http/Controllers/CustomerController';
+import EstimateController from '@/actions/App/Http/Controllers/EstimateController';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -12,49 +13,55 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import type { Customer } from '@/types';
+import type { Estimate } from '@/types';
 
 type Props = {
-    customer: Customer;
+    estimate: Estimate;
     trigger: ReactNode;
 };
 
-export default function DeleteCustomerDialog({ customer, trigger }: Props) {
+export default function ResubmitEstimateDialog({ estimate, trigger }: Props) {
     const [open, setOpen] = useState(false);
-    const fullName = `${customer.first_name} ${customer.last_name}`.trim();
-    const hasEstimates = (customer.estimates_count ?? 0) > 0;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{trigger}</DialogTrigger>
             <DialogContent>
-                <DialogTitle>Delete {fullName}?</DialogTitle>
+                <DialogTitle>Resubmit this PDF?</DialogTitle>
                 <DialogDescription>
-                    {hasEstimates
-                        ? `This customer has ${customer.estimates_count} estimate${
-                              customer.estimates_count === 1 ? '' : 's'
-                          }. Delete the estimates first before removing the customer.`
-                        : 'This customer will be moved to the archive. Their data is retained and can be restored by an administrator.'}
+                    The AI agent will run again on the same PDF. The title,
+                    total square footage, and room list will be replaced with
+                    whatever comes back. Interview answers and line item prices
+                    are kept.
                 </DialogDescription>
 
                 <Form
-                    {...CustomerController.destroy.form(customer.id)}
+                    {...EstimateController.retry.form(estimate.id)}
                     options={{ preserveScroll: false }}
                     onSuccess={() => setOpen(false)}
                 >
                     {({ processing }) => (
                         <DialogFooter className="gap-2">
                             <DialogClose asChild>
-                                <Button variant="secondary" type="button">
+                                <Button
+                                    variant="secondary"
+                                    type="button"
+                                    className="h-12 px-5 text-base"
+                                >
                                     Cancel
                                 </Button>
                             </DialogClose>
                             <Button
-                                variant="destructive"
                                 type="submit"
-                                disabled={processing || hasEstimates}
+                                disabled={processing}
+                                className="h-12 px-5 text-base"
                             >
-                                Delete customer
+                                <RefreshCw
+                                    className={`mr-2 h-4 w-4 ${
+                                        processing ? 'animate-spin' : ''
+                                    }`}
+                                />
+                                {processing ? 'Resubmitting…' : 'Resubmit PDF'}
                             </Button>
                         </DialogFooter>
                     )}

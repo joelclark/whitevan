@@ -17,6 +17,11 @@ enum ActivityEvent: string
     case CustomerCreated = 'customer.created';
     case CustomerUpdated = 'customer.updated';
     case CustomerDeleted = 'customer.deleted';
+    case EstimateCreated = 'estimate.created';
+    case EstimateUpdated = 'estimate.updated';
+    case EstimateDeleted = 'estimate.deleted';
+    case EstimateAgentFailed = 'estimate.agent_failed';
+    case AiAgentSettingUpdated = 'ai.agent_setting_updated';
 
     public function label(): string
     {
@@ -34,6 +39,11 @@ enum ActivityEvent: string
             self::CustomerCreated => 'Customer created',
             self::CustomerUpdated => 'Customer updated',
             self::CustomerDeleted => 'Customer deleted',
+            self::EstimateCreated => 'Estimate created',
+            self::EstimateUpdated => 'Estimate updated',
+            self::EstimateDeleted => 'Estimate deleted',
+            self::EstimateAgentFailed => 'Estimate agent run failed',
+            self::AiAgentSettingUpdated => 'AI agent setting updated',
         };
     }
 }

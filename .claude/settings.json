@@ -20,6 +20,7 @@
       "Bash(php artisan migrate:rollback:*)",
       "Bash(php artisan test:*)",
       "Bash(php:*)",
+      "Bash(sed:*)",
       "Bash(sort -t: -k2 -nr)",
       "Bash(vendor/bin/pint:*)",
       "Bash(wc:*)",

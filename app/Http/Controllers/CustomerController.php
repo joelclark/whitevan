@@ -8,6 +8,7 @@ use App\Http\Requests\CustomerRequest;
 use App\Models\Customer;
 use App\Services\ActivityLogger;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -85,6 +86,7 @@ class CustomerController extends Controller
         });
 
         $customer->last_accessed_at = now();
+        $customer->loadCount('estimates');
 
         return Inertia::render('customers/edit', [
             'customer' => $customer,
@@ -125,7 +127,17 @@ class CustomerController extends Controller
         $customerId = $customer->id;
         $customerName = trim($customer->first_name.' '.$customer->last_name);
 
-        $customer->delete();
+        // The estimates FK is restrictOnDelete — let the database enforce the
+        // rule and surface a friendly message instead of a 500.
+        if ($customer->estimates()->exists()) {
+            return back()->with('status', 'customer-has-estimates');
+        }
+
+        try {
+            $customer->delete();
+        } catch (QueryException $e) {
+            return back()->with('status', 'customer-has-estimates');
+        }
 
         ActivityLogger::event(
             ActivityEvent::CustomerDeleted,

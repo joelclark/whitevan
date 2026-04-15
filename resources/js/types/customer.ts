@@ -16,6 +16,7 @@ export type Customer = {
     created_at: string;
     updated_at: string;
     deleted_at: string | null;
+    estimates_count?: number;
 };
 
 export type PaginatedCustomers = {
