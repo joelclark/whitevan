@@ -1,34 +1,53 @@
-import { Form, Head, Link, router } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { AlertCircle, ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
 import { useEffect } from 'react';
 import EstimateController from '@/actions/App/Http/Controllers/EstimateController';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { index as estimatesIndex } from '@/routes/estimates';
-import type { Estimate, EstimateRoom } from '@/types';
+import type {
+    Auth,
+    Estimate,
+    EstimateRoom,
+    FloorplanPagePreview,
+    InterviewProps,
+} from '@/types';
 import EstimateRecordHeader from './estimate-record-header';
 import RoomsList from './rooms-list';
 
 type Props = {
     estimate: Estimate & { rooms: EstimateRoom[] };
+    interview: InterviewProps | null;
+    floorplan_pages: FloorplanPagePreview[];
 };
 
-export default function EstimatesEdit({ estimate }: Props) {
+export default function EstimatesEdit({
+    estimate,
+    interview,
+    floorplan_pages,
+}: Props) {
+    const { auth } = usePage<{ auth: Auth }>().props;
     const isProcessing = estimate.status === 'processing';
+    const isRenderingFloorplans =
+        estimate.floorplan_assets_status === 'pending';
+    const shouldPoll = isProcessing || isRenderingFloorplans;
+    const canViewDebugLog = Boolean(auth.impersonating);
 
     useEffect(() => {
-        if (!isProcessing) {
+        if (!shouldPoll) {
             return;
         }
 
         const interval = window.setInterval(() => {
-            router.reload({ only: ['estimate'] });
+            router.reload({
+                only: ['estimate', 'interview', 'floorplan_pages'],
+            });
         }, 2000);
 
         return () => {
             window.clearInterval(interval);
         };
-    }, [isProcessing]);
+    }, [shouldPoll]);
 
     const displayTitle = estimate.title ?? estimate.pdf_original_filename;
 
@@ -73,7 +92,11 @@ export default function EstimatesEdit({ estimate }: Props) {
                         )}
 
                         {estimate.status === 'ready' && (
-                            <RoomsList rooms={estimate.rooms} />
+                            <RoomsList
+                                estimate={estimate}
+                                interview={interview}
+                                floorplanPages={floorplan_pages}
+                            />
                         )}
 
                         {estimate.status === 'failed' && (
@@ -144,16 +167,6 @@ export default function EstimatesEdit({ estimate }: Props) {
 
                     <section className="rounded-xl border bg-muted/20 p-6 text-muted-foreground">
                         <h2 className="mb-2 text-lg font-semibold text-foreground">
-                            Interview
-                        </h2>
-                        <p className="text-sm">
-                            Coming soon — structured questions that shape the
-                            estimate.
-                        </p>
-                    </section>
-
-                    <section className="rounded-xl border bg-muted/20 p-6 text-muted-foreground">
-                        <h2 className="mb-2 text-lg font-semibold text-foreground">
                             Line item prices
                         </h2>
                         <p className="text-sm">
@@ -162,7 +175,7 @@ export default function EstimatesEdit({ estimate }: Props) {
                         </p>
                     </section>
 
-                    {estimate.debug_log && (
+                    {canViewDebugLog && estimate.debug_log && (
                         <details className="group rounded-xl border bg-muted/10 open:bg-muted/20">
                             <summary className="flex cursor-pointer items-center justify-between gap-3 px-6 py-4 text-sm font-semibold marker:content-none">
                                 <span>

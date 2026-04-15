@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Contexts\AccountContext;
 use App\Enums\ActivityEvent;
 use App\Enums\EstimateStatus;
+use App\Enums\FloorplanAssetsStatus;
+use App\Enums\Trade;
 use App\Http\Requests\EstimateStoreRequest;
 use App\Http\Requests\EstimateUpdateRequest;
+use App\Interviews\InterviewDispatcher;
 use App\Jobs\ProcessEstimatePdfJob;
 use App\Models\Customer;
 use App\Models\Estimate;
@@ -78,6 +81,9 @@ class EstimateController extends Controller
 
         $estimate = Estimate::create([
             'customer_id' => $customer->id,
+            // Flooring is the only trade today. When trade selection lands in
+            // the upload form, read it from $request instead of hard-coding.
+            'trade' => Trade::Flooring,
             'pdf_path' => $path,
             'pdf_original_filename' => $file->getClientOriginalName(),
             'status' => EstimateStatus::Processing,
@@ -104,10 +110,46 @@ class EstimateController extends Controller
 
     public function edit(Estimate $estimate): Response
     {
-        $estimate->load(['customer', 'rooms']);
+        $estimate->load(['customer', 'rooms', 'floorplanPages']);
+
+        // Normalize interview_answers for Inertia: AsArrayObject flattens
+        // empty inner maps to [], but the frontend type expects objects.
+        // Cast inner maps to stdClass at the JSON boundary so empties
+        // serialize as {} instead of [].
+        $serialized = $estimate->toArray();
+        $raw = $estimate->interview_answers;
+        $rooms = $raw['rooms'] ?? [];
+        $longTail = $raw['long_tail'] ?? [];
+        $serialized['interview_answers'] = [
+            'rooms' => (object) ($rooms instanceof \ArrayObject ? $rooms->getArrayCopy() : (array) $rooms),
+            'long_tail' => (object) ($longTail instanceof \ArrayObject ? $longTail->getArrayCopy() : (array) $longTail),
+        ];
+
+        $interviewProps = null;
+        if ($estimate->status === EstimateStatus::Ready) {
+            $interview = InterviewDispatcher::for($estimate);
+            $next = $interview->nextQuestionFor($estimate);
+            $interviewProps = [
+                'next_question' => $next?->toArray(),
+                'is_complete' => $next === null,
+                'catalog' => $interview->catalog(),
+            ];
+        }
+
+        $floorplanPages = $estimate->floorplanPages
+            ->map(fn ($page) => [
+                'page' => $page->page,
+                'width' => $page->width,
+                'height' => $page->height,
+                'url' => route('estimates.floorplan-page', ['estimate' => $estimate->id, 'page' => $page->page]),
+            ])
+            ->values()
+            ->all();
 
         return Inertia::render('estimates/edit', [
-            'estimate' => $estimate,
+            'estimate' => $serialized,
+            'interview' => $interviewProps,
+            'floorplan_pages' => $floorplanPages,
         ]);
     }
 
@@ -123,8 +165,6 @@ class EstimateController extends Controller
 
         $estimate->fill([
             'title' => $validated['title'] ?? $estimate->title,
-            'interview_answers' => $validated['interview_answers'] ?? $estimate->interview_answers->getArrayCopy(),
-            'line_item_prices' => $validated['line_item_prices'] ?? $estimate->line_item_prices->getArrayCopy(),
         ]);
 
         if ($estimate->isDirty()) {
@@ -159,9 +199,31 @@ class EstimateController extends Controller
         // UI confirms before sending that through.
         abort_if($estimate->status === EstimateStatus::Processing, 409);
 
+        // Stale floorplan PNGs from the previous run would otherwise show in
+        // the gallery during the gap between retry and the new render job
+        // completing. Wipe rows + files up-front so the UI shows a clean
+        // skeleton state.
+        $stalePages = $estimate->floorplanPages()->get();
+        if ($stalePages->isNotEmpty()) {
+            Storage::disk('local')->delete($stalePages->pluck('image_path')->all());
+            $estimate->floorplanPages()->delete();
+        }
+
+        // Retry regenerates rooms with new ids, so any stored room-scoped
+        // answers in interview_answers would orphan. Reset to a clean
+        // nested shape so the interview restarts from scratch.
+        $debugLog = is_array($estimate->debug_log) ? $estimate->debug_log : [];
+        unset($debugLog['floorplan']);
+
         $estimate->forceFill([
             'status' => EstimateStatus::Processing,
+            'floorplan_assets_status' => FloorplanAssetsStatus::Pending,
             'agent_errors' => [],
+            'debug_log' => $debugLog === [] ? null : $debugLog,
+            'interview_answers' => [
+                'rooms' => new \ArrayObject,
+                'long_tail' => new \ArrayObject,
+            ],
         ])->save();
 
         ProcessEstimatePdfJob::dispatch($estimate->id);
@@ -205,6 +267,28 @@ class EstimateController extends Controller
             $estimate->pdf_path,
             $estimate->pdf_original_filename,
             ['Content-Type' => 'application/pdf'],
+        );
+    }
+
+    public function floorplanPage(Estimate $estimate, int $page): StreamedResponse
+    {
+        // Always look up by the relationship — never accept a path from the
+        // request. Route-model binding has already enforced account scoping
+        // on $estimate via the BelongsToAccount global scope.
+        $row = $estimate->floorplanPages()->where('page', $page)->firstOrFail();
+
+        abort_unless(Storage::disk('local')->exists($row->image_path), 404);
+
+        return Storage::disk('local')->response(
+            $row->image_path,
+            "estimate-{$estimate->id}-page-{$page}.png",
+            [
+                'Content-Type' => 'image/png',
+                // Images are immutable per (estimate, page) — a re-render
+                // wipes the row entirely. Cache aggressively so the 2-second
+                // poll loop doesn't re-fetch every PNG on each tick.
+                'Cache-Control' => 'private, max-age=3600',
+            ],
         );
     }
 }

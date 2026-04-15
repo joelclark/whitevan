@@ -6,6 +6,7 @@ use App\Ai\Agents\FloorPlanExtractionAgent;
 use App\Enums\ActivityEvent;
 use App\Enums\AiAgentKind;
 use App\Enums\EstimateStatus;
+use App\Enums\FloorplanAssetsStatus;
 use App\Models\AiAgentSetting;
 use App\Models\Estimate;
 use App\Services\ActivityLogger;
@@ -121,6 +122,9 @@ class ProcessEstimatePdfJob implements ShouldQueue
                 'agent_errors' => $errors,
                 'debug_log' => $debugLog,
                 'status' => EstimateStatus::Ready,
+                // Asset rendering is its own job; mark it pending so the UI
+                // shows a skeleton until the worker picks up the chained job.
+                'floorplan_assets_status' => FloorplanAssetsStatus::Pending,
             ])->save();
 
             foreach ($rooms as $index => $room) {
@@ -140,6 +144,12 @@ class ProcessEstimatePdfJob implements ShouldQueue
                 ]);
             }
         });
+
+        // Hand off to the renderer in a separate job so failures there don't
+        // flip the main estimate to failed. afterCommit() avoids the database
+        // queue race where a worker could pick up the row before this
+        // transaction has been observed by other connections.
+        ExtractEstimateFloorplanAssetsJob::dispatch($estimate->id)->afterCommit();
     }
 
     /**

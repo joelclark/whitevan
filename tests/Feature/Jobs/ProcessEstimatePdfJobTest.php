@@ -4,12 +4,15 @@ use App\Ai\Agents\FloorPlanExtractionAgent;
 use App\Enums\ActivityEvent;
 use App\Enums\AiAgentKind;
 use App\Enums\EstimateStatus;
+use App\Enums\FloorplanAssetsStatus;
+use App\Jobs\ExtractEstimateFloorplanAssetsJob;
 use App\Jobs\ProcessEstimatePdfJob;
 use App\Models\Account;
 use App\Models\ActivityLog;
 use App\Models\AiAgentSetting;
 use App\Models\Customer;
 use App\Models\Estimate;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Ai;
 
@@ -19,6 +22,10 @@ beforeEach(function () {
     ]);
 
     Storage::fake('local');
+
+    // Only fake the chained extraction job so success-path assertions don't
+    // try to shell out to pdftoppm. ProcessEstimatePdfJob itself runs inline.
+    Bus::fake([ExtractEstimateFloorplanAssetsJob::class]);
 });
 
 test('successful extraction fills the estimate and its rooms', function () {
@@ -58,6 +65,12 @@ test('successful extraction fills the estimate and its rooms', function () {
     // 4 * sqrt(400) = 80
     expect($living->linear_feet)->toBe(80);
     expect($living->position)->toBe(1);
+
+    expect($estimate->floorplan_assets_status)->toBe(FloorplanAssetsStatus::Pending);
+    Bus::assertDispatched(
+        ExtractEstimateFloorplanAssetsJob::class,
+        fn (ExtractEstimateFloorplanAssetsJob $job) => $job->estimateId === $estimate->id,
+    );
 });
 
 test('agent errors are stored and the estimate is marked ready when other fields are present', function () {

@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\EstimateStatus;
+use App\Enums\Trade;
 use App\Models\Customer;
 use App\Models\Estimate;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -19,6 +20,7 @@ class EstimateFactory extends Factory
     public function definition(): array
     {
         return [
+            'trade' => Trade::Flooring,
             'title' => fake()->randomElement([
                 'Main floor',
                 'Upstairs bedrooms',

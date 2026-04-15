@@ -24,24 +24,6 @@ test('members can rename an estimate', function () {
     expect(ActivityLog::where('event', ActivityEvent::EstimateUpdated)->count())->toBe(1);
 });
 
-test('interview answers and line item prices round-trip as a map', function () {
-    $account = Account::factory()->create();
-    $user = $account->owner;
-    $customer = Customer::factory()->create(['account_id' => $account->id]);
-    $estimate = Estimate::factory()->forCustomer($customer)->create();
-
-    $this->actingAs($user)
-        ->patch(route('estimates.update', $estimate), [
-            'interview_answers' => ['carpet' => 'yes', 'paint' => 'no'],
-            'line_item_prices' => ['carpet' => '2500', 'paint' => '0'],
-        ])
-        ->assertRedirect();
-
-    $estimate->refresh();
-    expect($estimate->interview_answers['carpet'])->toBe('yes');
-    expect($estimate->line_item_prices['carpet'])->toBe('2500');
-});
-
 test('a member in another account cannot update the estimate', function () {
     $otherAccount = Account::factory()->create();
     $customer = Customer::factory()->create(['account_id' => $otherAccount->id]);
