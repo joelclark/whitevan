@@ -22,3 +22,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
 require __DIR__.'/settings.php';
 require __DIR__.'/admin.php';
 require __DIR__.'/sysops.php';
+require __DIR__.'/customers.php';
