@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Contexts\AccountContext;
 use App\Enums\ActivityEvent;
 use App\Enums\EstimateStatus;
+use App\Enums\FloorplanAssetsStatus;
 use App\Enums\Trade;
 use App\Http\Requests\EstimateStoreRequest;
 use App\Http\Requests\EstimateUpdateRequest;
@@ -109,7 +110,7 @@ class EstimateController extends Controller
 
     public function edit(Estimate $estimate): Response
     {
-        $estimate->load(['customer', 'rooms']);
+        $estimate->load(['customer', 'rooms', 'floorplanPages']);
 
         // Normalize interview_answers for Inertia: AsArrayObject flattens
         // empty inner maps to [], but the frontend type expects objects.
@@ -135,9 +136,20 @@ class EstimateController extends Controller
             ];
         }
 
+        $floorplanPages = $estimate->floorplanPages
+            ->map(fn ($page) => [
+                'page' => $page->page,
+                'width' => $page->width,
+                'height' => $page->height,
+                'url' => route('estimates.floorplan-page', ['estimate' => $estimate->id, 'page' => $page->page]),
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render('estimates/edit', [
             'estimate' => $serialized,
             'interview' => $interviewProps,
+            'floorplan_pages' => $floorplanPages,
         ]);
     }
 
@@ -187,12 +199,27 @@ class EstimateController extends Controller
         // UI confirms before sending that through.
         abort_if($estimate->status === EstimateStatus::Processing, 409);
 
+        // Stale floorplan PNGs from the previous run would otherwise show in
+        // the gallery during the gap between retry and the new render job
+        // completing. Wipe rows + files up-front so the UI shows a clean
+        // skeleton state.
+        $stalePages = $estimate->floorplanPages()->get();
+        if ($stalePages->isNotEmpty()) {
+            Storage::disk('local')->delete($stalePages->pluck('image_path')->all());
+            $estimate->floorplanPages()->delete();
+        }
+
         // Retry regenerates rooms with new ids, so any stored room-scoped
         // answers in interview_answers would orphan. Reset to a clean
         // nested shape so the interview restarts from scratch.
+        $debugLog = is_array($estimate->debug_log) ? $estimate->debug_log : [];
+        unset($debugLog['floorplan']);
+
         $estimate->forceFill([
             'status' => EstimateStatus::Processing,
+            'floorplan_assets_status' => FloorplanAssetsStatus::Pending,
             'agent_errors' => [],
+            'debug_log' => $debugLog === [] ? null : $debugLog,
             'interview_answers' => [
                 'rooms' => new \ArrayObject,
                 'long_tail' => new \ArrayObject,
@@ -240,6 +267,28 @@ class EstimateController extends Controller
             $estimate->pdf_path,
             $estimate->pdf_original_filename,
             ['Content-Type' => 'application/pdf'],
+        );
+    }
+
+    public function floorplanPage(Estimate $estimate, int $page): StreamedResponse
+    {
+        // Always look up by the relationship — never accept a path from the
+        // request. Route-model binding has already enforced account scoping
+        // on $estimate via the BelongsToAccount global scope.
+        $row = $estimate->floorplanPages()->where('page', $page)->firstOrFail();
+
+        abort_unless(Storage::disk('local')->exists($row->image_path), 404);
+
+        return Storage::disk('local')->response(
+            $row->image_path,
+            "estimate-{$estimate->id}-page-{$page}.png",
+            [
+                'Content-Type' => 'image/png',
+                // Images are immutable per (estimate, page) — a re-render
+                // wipes the row entirely. Cache aggressively so the 2-second
+                // poll loop doesn't re-fetch every PNG on each tick.
+                'Cache-Control' => 'private, max-age=3600',
+            ],
         );
     }
 }

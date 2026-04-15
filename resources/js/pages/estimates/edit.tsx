@@ -5,33 +5,49 @@ import EstimateController from '@/actions/App/Http/Controllers/EstimateControlle
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { index as estimatesIndex } from '@/routes/estimates';
-import type { Auth, Estimate, EstimateRoom, InterviewProps } from '@/types';
+import type {
+    Auth,
+    Estimate,
+    EstimateRoom,
+    FloorplanPagePreview,
+    InterviewProps,
+} from '@/types';
 import EstimateRecordHeader from './estimate-record-header';
 import RoomsList from './rooms-list';
 
 type Props = {
     estimate: Estimate & { rooms: EstimateRoom[] };
     interview: InterviewProps | null;
+    floorplan_pages: FloorplanPagePreview[];
 };
 
-export default function EstimatesEdit({ estimate, interview }: Props) {
+export default function EstimatesEdit({
+    estimate,
+    interview,
+    floorplan_pages,
+}: Props) {
     const { auth } = usePage<{ auth: Auth }>().props;
     const isProcessing = estimate.status === 'processing';
+    const isRenderingFloorplans =
+        estimate.floorplan_assets_status === 'pending';
+    const shouldPoll = isProcessing || isRenderingFloorplans;
     const canViewDebugLog = Boolean(auth.impersonating);
 
     useEffect(() => {
-        if (!isProcessing) {
+        if (!shouldPoll) {
             return;
         }
 
         const interval = window.setInterval(() => {
-            router.reload({ only: ['estimate', 'interview'] });
+            router.reload({
+                only: ['estimate', 'interview', 'floorplan_pages'],
+            });
         }, 2000);
 
         return () => {
             window.clearInterval(interval);
         };
-    }, [isProcessing]);
+    }, [shouldPoll]);
 
     const displayTitle = estimate.title ?? estimate.pdf_original_filename;
 
@@ -79,6 +95,7 @@ export default function EstimatesEdit({ estimate, interview }: Props) {
                             <RoomsList
                                 estimate={estimate}
                                 interview={interview}
+                                floorplanPages={floorplan_pages}
                             />
                         )}
 

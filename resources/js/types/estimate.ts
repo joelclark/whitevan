@@ -2,6 +2,15 @@ import type { Customer } from './customer';
 
 export type EstimateStatus = 'processing' | 'ready' | 'failed';
 
+export type FloorplanAssetsStatus = 'pending' | 'ready' | 'failed';
+
+export type FloorplanPagePreview = {
+    page: number;
+    width: number;
+    height: number;
+    url: string;
+};
+
 export type Trade = 'flooring';
 
 export type InterviewAnswers = {
@@ -60,6 +69,7 @@ export type Estimate = {
     pdf_original_filename: string;
     total_sqft: number | null;
     status: EstimateStatus;
+    floorplan_assets_status: FloorplanAssetsStatus | null;
     interview_answers: InterviewAnswers;
     line_item_prices: Record<string, number | null>;
     agent_errors: string[];

@@ -1,9 +1,13 @@
+import { ImageOff } from 'lucide-react';
 import { useState } from 'react';
 import EstimateInterviewController from '@/actions/App/Http/Controllers/EstimateInterviewController';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import type {
     Estimate,
     EstimateRoom,
+    FloorplanAssetsStatus,
+    FloorplanPagePreview,
     InterviewProps,
     QuestionShape,
 } from '@/types';
@@ -17,9 +21,14 @@ import {
 type Props = {
     estimate: Estimate & { rooms: EstimateRoom[] };
     interview: InterviewProps | null;
+    floorplanPages: FloorplanPagePreview[];
 };
 
-export default function RoomsList({ estimate, interview }: Props) {
+export default function RoomsList({
+    estimate,
+    interview,
+    floorplanPages,
+}: Props) {
     if (estimate.rooms.length === 0 && interview === null) {
         return (
             <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
@@ -31,6 +40,10 @@ export default function RoomsList({ estimate, interview }: Props) {
     const answers = normalizeAnswers(estimate.interview_answers);
     const action = EstimateInterviewController.store.form(estimate.id);
     const pending = interview?.next_question ?? null;
+    const floorplanStatus = estimate.floorplan_assets_status;
+    const previewByPage = new Map(
+        floorplanPages.map((p) => [p.page, p]),
+    );
     const pendingRoomId = pending?.phase === 'room' ? pending.room_id : null;
     const longTailActive = pending?.phase === 'long_tail';
     const isComplete = interview?.is_complete ?? false;
@@ -65,6 +78,8 @@ return pending.room_index - 1;
                     isActive={pendingRoomId === room.id}
                     isDone={index <= doneThroughRoomIndex}
                     action={action}
+                    floorplanStatus={floorplanStatus}
+                    floorplanPage={previewByPage.get(room.page) ?? null}
                 />
             ))}
 
@@ -92,6 +107,8 @@ function RoomCard({
     isActive,
     isDone,
     action,
+    floorplanStatus,
+    floorplanPage,
 }: {
     room: EstimateRoom;
     roomAnswers: Record<string, string | number>;
@@ -100,44 +117,117 @@ function RoomCard({
     isActive: boolean;
     isDone: boolean;
     action: InterviewAction;
+    floorplanStatus: FloorplanAssetsStatus | null;
+    floorplanPage: FloorplanPagePreview | null;
 }) {
     return (
         <li
-            className={`rounded-xl border bg-card ${
+            className={`overflow-hidden rounded-xl border bg-card ${
                 isActive ? 'border-primary/40 shadow-sm' : ''
             }`}
         >
-            <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-5 py-4">
-                <div className="flex items-center gap-3">
-                    <span className="text-base font-medium">{room.name}</span>
-                    <Badge variant="outline">Page {room.page}</Badge>
-                    {isDone && <span aria-label="Complete">✅</span>}
-                </div>
-                <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                    <span>
-                        <span className="font-semibold text-foreground">
-                            {room.sqft.toLocaleString()}
-                        </span>{' '}
-                        sq ft
-                    </span>
-                    <span>
-                        <span className="font-semibold text-foreground">
-                            {room.linear_feet.toLocaleString()}
-                        </span>{' '}
-                        linear ft
-                    </span>
+            <div className="grid gap-0 sm:grid-cols-[minmax(0,14rem)_1fr]">
+                <FloorplanThumbnail
+                    page={room.page}
+                    status={floorplanStatus}
+                    preview={floorplanPage}
+                />
+
+                <div className="flex flex-col">
+                    <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-5 py-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-base font-medium">
+                                {room.name}
+                            </span>
+                            <Badge variant="outline">Page {room.page}</Badge>
+                            {isDone && <span aria-label="Complete">✅</span>}
+                        </div>
+                        <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                            <span>
+                                <span className="font-semibold text-foreground">
+                                    {room.sqft.toLocaleString()}
+                                </span>{' '}
+                                sq ft
+                            </span>
+                            <span>
+                                <span className="font-semibold text-foreground">
+                                    {room.linear_feet.toLocaleString()}
+                                </span>{' '}
+                                linear ft
+                            </span>
+                        </div>
+                    </div>
+
+                    <InterviewCardBody
+                        catalog={catalog}
+                        answers={roomAnswers}
+                        pendingQuestionKey={pendingQuestionKey}
+                        isActive={isActive}
+                        roomId={room.id}
+                        action={action}
+                    />
                 </div>
             </div>
-
-            <InterviewCardBody
-                catalog={catalog}
-                answers={roomAnswers}
-                pendingQuestionKey={pendingQuestionKey}
-                isActive={isActive}
-                roomId={room.id}
-                action={action}
-            />
         </li>
+    );
+}
+
+function FloorplanThumbnail({
+    page,
+    status,
+    preview,
+}: {
+    page: number;
+    status: FloorplanAssetsStatus | null;
+    preview: FloorplanPagePreview | null;
+}) {
+    const wrapper =
+        'relative aspect-[4/3] w-full overflow-hidden border-b bg-muted/30 sm:aspect-auto sm:h-full sm:border-r sm:border-b-0';
+
+    if (status === 'pending') {
+        return (
+            <div className={wrapper}>
+                <Skeleton className="absolute inset-0 rounded-none" />
+            </div>
+        );
+    }
+
+    if (status === 'ready' && preview) {
+        return (
+            <a
+                href={preview.url}
+                target="_blank"
+                rel="noreferrer"
+                className={`${wrapper} group block`}
+                aria-label={`Open floorplan page ${page} in a new tab`}
+            >
+                <img
+                    src={preview.url}
+                    width={preview.width || undefined}
+                    height={preview.height || undefined}
+                    alt={`Floorplan page ${page}`}
+                    loading="lazy"
+                    className="h-full w-full object-contain transition-transform group-hover:scale-[1.02]"
+                />
+            </a>
+        );
+    }
+
+    // ready-but-missing or failed: show a quiet placeholder so the row
+    // still has a visual anchor and the layout doesn't shift.
+    return (
+        <div
+            className={`${wrapper} flex items-center justify-center text-muted-foreground`}
+        >
+            <div className="flex flex-col items-center gap-1 text-xs">
+                <ImageOff className="h-6 w-6" />
+                <span>
+                    {status === 'failed'
+                        ? 'Render failed'
+                        : 'No preview'}
+                </span>
+            </div>
+        </div>
     );
 }
 

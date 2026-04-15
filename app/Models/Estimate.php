@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\BelongsToAccount;
 use App\Enums\EstimateStatus;
+use App\Enums\FloorplanAssetsStatus;
 use App\Enums\Trade;
 use Database\Factories\EstimateFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -27,6 +28,7 @@ use Illuminate\Support\Facades\Storage;
     'line_item_prices',
     'agent_errors',
     'debug_log',
+    'floorplan_assets_status',
 ])]
 class Estimate extends Model
 {
@@ -41,6 +43,7 @@ class Estimate extends Model
         return [
             'trade' => Trade::class,
             'status' => EstimateStatus::class,
+            'floorplan_assets_status' => FloorplanAssetsStatus::class,
             'total_sqft' => 'integer',
             'interview_answers' => AsArrayObject::class,
             'line_item_prices' => AsArrayObject::class,
@@ -58,6 +61,15 @@ class Estimate extends Model
             if ($estimate->pdf_path !== null && $estimate->pdf_path !== '') {
                 Storage::disk('local')->delete($estimate->pdf_path);
             }
+
+            // Floorplan PNGs follow the same disposable policy as the PDF —
+            // remove the rendered images on (soft) delete to avoid orphaned
+            // files. The DB rows are left in place by SoftDeletes; cascade
+            // would only fire on a hard delete.
+            $imagePaths = $estimate->floorplanPages()->pluck('image_path')->all();
+            if ($imagePaths !== []) {
+                Storage::disk('local')->delete($imagePaths);
+            }
         });
     }
 
@@ -72,5 +84,13 @@ class Estimate extends Model
     public function rooms(): HasMany
     {
         return $this->hasMany(EstimateRoom::class)->orderBy('position');
+    }
+
+    /**
+     * @return HasMany<EstimateFloorplanPage, $this>
+     */
+    public function floorplanPages(): HasMany
+    {
+        return $this->hasMany(EstimateFloorplanPage::class)->orderBy('page');
     }
 }
