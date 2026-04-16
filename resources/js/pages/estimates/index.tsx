@@ -122,6 +122,7 @@ export default function EstimatesIndex({ estimates, filters }: Props) {
                                 <th className="px-4 py-3 font-medium">
                                     Status
                                 </th>
+                                <th className="px-4 py-3 font-medium">Quote</th>
                                 <th className="px-4 py-3 font-medium">
                                     Updated
                                 </th>
@@ -131,7 +132,7 @@ export default function EstimatesIndex({ estimates, filters }: Props) {
                             {!hasEstimates && (
                                 <tr>
                                     <td
-                                        colSpan={5}
+                                        colSpan={6}
                                         className="px-4 py-16 text-center text-muted-foreground"
                                     >
                                         {hasSearch
@@ -180,6 +181,14 @@ export default function EstimatesIndex({ estimates, filters }: Props) {
                                         </td>
                                         <td className="px-4 py-4">
                                             {statusBadge(estimate.status)}
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            {estimate.quote_status ===
+                                                'sent' && (
+                                                <Badge variant="outline">
+                                                    Sent
+                                                </Badge>
+                                            )}
                                         </td>
                                         <td className="px-4 py-4 whitespace-nowrap text-muted-foreground">
                                             {formatDate(estimate.updated_at)}

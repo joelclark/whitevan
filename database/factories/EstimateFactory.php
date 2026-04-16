@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\EstimateStatus;
+use App\Enums\QuoteStatus;
 use App\Enums\Trade;
 use App\Models\Customer;
 use App\Models\Estimate;
@@ -57,6 +58,15 @@ class EstimateFactory extends Factory
         return $this->state(fn () => [
             'status' => EstimateStatus::Failed,
             'agent_errors' => ['The PDF could not be read.'],
+        ]);
+    }
+
+    public function quoteSent(): static
+    {
+        return $this->state(fn () => [
+            'quote_status' => QuoteStatus::Sent,
+            'quote_token' => Str::ulid()->toBase32(),
+            'quote_sent_at' => now(),
         ]);
     }
 }

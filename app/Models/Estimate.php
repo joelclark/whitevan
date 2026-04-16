@@ -5,7 +5,9 @@ namespace App\Models;
 use App\Concerns\BelongsToAccount;
 use App\Enums\EstimateStatus;
 use App\Enums\FloorplanAssetsStatus;
+use App\Enums\QuoteStatus;
 use App\Enums\Trade;
+use Carbon\CarbonInterface;
 use Database\Factories\EstimateFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
@@ -14,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
@@ -29,6 +32,10 @@ use Illuminate\Support\Facades\Storage;
     'agent_errors',
     'debug_log',
     'floorplan_assets_status',
+    'quote_status',
+    'quote_token',
+    'quote_sent_at',
+    'quote_customer_viewed_at',
 ])]
 class Estimate extends Model
 {
@@ -44,6 +51,9 @@ class Estimate extends Model
             'trade' => Trade::class,
             'status' => EstimateStatus::class,
             'floorplan_assets_status' => FloorplanAssetsStatus::class,
+            'quote_status' => QuoteStatus::class,
+            'quote_sent_at' => 'datetime',
+            'quote_customer_viewed_at' => 'datetime',
             'total_sqft' => 'integer',
             'interview_answers' => AsArrayObject::class,
 
@@ -112,5 +122,34 @@ class Estimate extends Model
     public function floorplanPages(): HasMany
     {
         return $this->hasMany(EstimateFloorplanPage::class)->orderBy('page');
+    }
+
+    public function isQuoteSent(): bool
+    {
+        return $this->quote_status === QuoteStatus::Sent;
+    }
+
+    public function latestContentChange(): CarbonInterface
+    {
+        $lineItemMax = $this->activeLineItems()->max('updated_at');
+
+        if ($lineItemMax === null) {
+            return $this->updated_at;
+        }
+
+        $lineItemDate = Carbon::parse($lineItemMax);
+
+        return $this->updated_at->greaterThan($lineItemDate)
+            ? $this->updated_at
+            : $lineItemDate;
+    }
+
+    public function hasChangedSinceCustomerViewed(): bool
+    {
+        if ($this->quote_customer_viewed_at === null) {
+            return true;
+        }
+
+        return $this->latestContentChange()->greaterThan($this->quote_customer_viewed_at);
     }
 }

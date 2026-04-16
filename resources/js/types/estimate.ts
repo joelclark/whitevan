@@ -2,6 +2,8 @@ import type { Customer } from './customer';
 
 export type EstimateStatus = 'processing' | 'ready' | 'failed';
 
+export type QuoteStatus = 'sent';
+
 export type FloorplanAssetsStatus = 'pending' | 'ready' | 'failed';
 
 export type FloorplanPagePreview = {
@@ -81,6 +83,10 @@ export type Estimate = {
     pdf_original_filename: string;
     total_sqft: number | null;
     status: EstimateStatus;
+    quote_status: QuoteStatus | null;
+    quote_token: string | null;
+    quote_sent_at: string | null;
+    quote_customer_viewed_at: string | null;
     floorplan_assets_status: FloorplanAssetsStatus | null;
     interview_answers: InterviewAnswers;
     line_items?: EstimateLineItem[];
