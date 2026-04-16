@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Trades\Flooring\Interview\Questions\LongTail;
+namespace App\Trades\Flooring\Interview\Questions\ProjectWide;
 
 use App\Interviews\Question;
 use App\Interviews\QuestionType;

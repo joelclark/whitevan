@@ -8,12 +8,13 @@ use App\Interviews\Phase;
 use App\Interviews\Question;
 use App\Interviews\TradeInterview;
 use App\Models\Estimate;
-use App\Trades\Flooring\Interview\Questions\LongTail\BaseboardsQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\DemoHaulAwayQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\DoorUndercutsQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\QuarterRoundQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\ToiletPullsQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\TransitionsQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\BaseboardsQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\CustomerTypeQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\DemoHaulAwayQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\DoorUndercutsQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\QuarterRoundQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\ToiletPullsQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\TransitionsQuestion;
 use App\Trades\Flooring\Interview\Questions\Room\ExistingQuestion;
 use App\Trades\Flooring\Interview\Questions\Room\FurnitureQuestion;
 use App\Trades\Flooring\Interview\Questions\Room\HeavyCountQuestion;
@@ -33,7 +34,8 @@ class FlooringInterview implements TradeInterview
     ];
 
     /** @var list<class-string<Question>> */
-    public const LONG_TAIL_QUESTIONS = [
+    public const PROJECT_WIDE_QUESTIONS = [
+        CustomerTypeQuestion::class,
         DemoHaulAwayQuestion::class,
         BaseboardsQuestion::class,
         QuarterRoundQuestion::class,
@@ -53,7 +55,7 @@ class FlooringInterview implements TradeInterview
                 $question = app($class);
                 $ctx = new AnswerContext(
                     $answers['rooms'],
-                    $answers['long_tail'],
+                    $answers['project_wide'],
                     $room->id,
                     Phase::Room,
                 );
@@ -70,24 +72,24 @@ class FlooringInterview implements TradeInterview
             }
         }
 
-        foreach (self::LONG_TAIL_QUESTIONS as $class) {
+        foreach (self::PROJECT_WIDE_QUESTIONS as $class) {
             $question = app($class);
             $ctx = new AnswerContext(
                 $answers['rooms'],
-                $answers['long_tail'],
+                $answers['project_wide'],
                 null,
-                Phase::LongTail,
+                Phase::ProjectWide,
             );
 
             if (! $question->shouldAsk($ctx)) {
                 continue;
             }
 
-            if (array_key_exists($question->key(), $answers['long_tail'])) {
+            if (array_key_exists($question->key(), $answers['project_wide'])) {
                 continue;
             }
 
-            return new PendingQuestion($question, Phase::LongTail, null, -1, $total);
+            return new PendingQuestion($question, Phase::ProjectWide, null, -1, $total);
         }
 
         return null;
@@ -135,7 +137,7 @@ class FlooringInterview implements TradeInterview
 
             $answers['rooms'][$roomKey] = $roomAnswers;
         } else {
-            $answers['long_tail'][$questionKey] = $value;
+            $answers['project_wide'][$questionKey] = $value;
         }
 
         $estimate->interview_answers = $answers;
@@ -150,7 +152,7 @@ class FlooringInterview implements TradeInterview
     {
         return [
             'room' => array_map(fn (string $class) => $this->questionMetadata(app($class)), self::ROOM_QUESTIONS),
-            'long_tail' => array_map(fn (string $class) => $this->questionMetadata(app($class)), self::LONG_TAIL_QUESTIONS),
+            'project_wide' => array_map(fn (string $class) => $this->questionMetadata(app($class)), self::PROJECT_WIDE_QUESTIONS),
         ];
     }
 
@@ -171,7 +173,7 @@ class FlooringInterview implements TradeInterview
     }
 
     /**
-     * @return array{rooms: array<string, array<string, string|int>>, long_tail: array<string, string|int>}
+     * @return array{rooms: array<string, array<string, string|int>>, project_wide: array<string, string|int>}
      */
     private function normalize(Estimate $estimate): array
     {
@@ -179,14 +181,14 @@ class FlooringInterview implements TradeInterview
         $arr = $this->toPlainArray($raw);
 
         $rooms = $this->toPlainArray($arr['rooms'] ?? []);
-        $longTail = $this->toPlainArray($arr['long_tail'] ?? []);
+        $projectWide = $this->toPlainArray($arr['project_wide'] ?? []);
 
         $cleanRooms = [];
         foreach ($rooms as $roomId => $roomAnswers) {
             $cleanRooms[(string) $roomId] = $this->toPlainArray($roomAnswers);
         }
 
-        return ['rooms' => $cleanRooms, 'long_tail' => $longTail];
+        return ['rooms' => $cleanRooms, 'project_wide' => $projectWide];
     }
 
     /**
@@ -217,7 +219,7 @@ class FlooringInterview implements TradeInterview
             }
         }
 
-        foreach (self::LONG_TAIL_QUESTIONS as $class) {
+        foreach (self::PROJECT_WIDE_QUESTIONS as $class) {
             $question = app($class);
             if ($question->key() === $questionKey) {
                 return [$question, false];

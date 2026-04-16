@@ -1,21 +1,21 @@
 <?php
 
-namespace App\Trades\Flooring\Interview\Questions\LongTail;
+namespace App\Trades\Flooring\Interview\Questions\ProjectWide;
 
 use App\Interviews\Question;
 use App\Interviews\QuestionType;
 use Illuminate\Validation\ValidationException;
 
-class DoorUndercutsQuestion extends Question
+class ToiletPullsQuestion extends Question
 {
     public function key(): string
     {
-        return 'door_undercuts';
+        return 'toilet_pulls';
     }
 
     public function label(): string
     {
-        return 'How many doors need to be undercut?';
+        return 'How many toilets need to be pulled and reset?';
     }
 
     public function type(): QuestionType

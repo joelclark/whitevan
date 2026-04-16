@@ -2,12 +2,12 @@
 
 use App\Interviews\AnswerContext;
 use App\Interviews\Phase;
-use App\Trades\Flooring\Interview\Questions\LongTail\BaseboardsQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\DemoHaulAwayQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\DoorUndercutsQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\QuarterRoundQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\ToiletPullsQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\TransitionsQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\BaseboardsQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\DemoHaulAwayQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\DoorUndercutsQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\QuarterRoundQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\ToiletPullsQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\TransitionsQuestion;
 use App\Trades\Flooring\Interview\Questions\Room\ExistingQuestion;
 use App\Trades\Flooring\Interview\Questions\Room\FurnitureQuestion;
 use App\Trades\Flooring\Interview\Questions\Room\HeavyCountQuestion;
@@ -99,7 +99,7 @@ test('HeavyCountQuestion::shouldAsk is true only when furniture is heavy', funct
 
     $ctx = fn (?string $furniture) => new AnswerContext(
         rooms: ['1' => $furniture !== null ? ['furniture' => $furniture] : []],
-        longTail: [],
+        projectWide: [],
         currentRoomId: 1,
         phase: Phase::Room,
     );

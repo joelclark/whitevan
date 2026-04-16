@@ -10,6 +10,8 @@ use App\Enums\Trade;
 use App\Http\Requests\EstimateStoreRequest;
 use App\Http\Requests\EstimateUpdateRequest;
 use App\Interviews\InterviewDispatcher;
+use App\Interviews\LineItemEmitterDispatcher;
+use App\Interviews\LineItemReconciler;
 use App\Jobs\ProcessEstimatePdfJob;
 use App\Models\Customer;
 use App\Models\Estimate;
@@ -88,7 +90,6 @@ class EstimateController extends Controller
             'pdf_original_filename' => $file->getClientOriginalName(),
             'status' => EstimateStatus::Processing,
             'interview_answers' => [],
-            'line_item_prices' => [],
             'agent_errors' => [],
         ]);
 
@@ -110,7 +111,7 @@ class EstimateController extends Controller
 
     public function edit(Estimate $estimate): Response
     {
-        $estimate->load(['customer', 'rooms', 'floorplanPages']);
+        $estimate->load(['customer', 'rooms', 'floorplanPages', 'activeLineItems']);
 
         // Normalize interview_answers for Inertia: AsArrayObject flattens
         // empty inner maps to [], but the frontend type expects objects.
@@ -119,21 +120,31 @@ class EstimateController extends Controller
         $serialized = $estimate->toArray();
         $raw = $estimate->interview_answers;
         $rooms = $raw['rooms'] ?? [];
-        $longTail = $raw['long_tail'] ?? [];
+        $projectWide = $raw['project_wide'] ?? [];
         $serialized['interview_answers'] = [
             'rooms' => (object) ($rooms instanceof \ArrayObject ? $rooms->getArrayCopy() : (array) $rooms),
-            'long_tail' => (object) ($longTail instanceof \ArrayObject ? $longTail->getArrayCopy() : (array) $longTail),
+            'project_wide' => (object) ($projectWide instanceof \ArrayObject ? $projectWide->getArrayCopy() : (array) $projectWide),
         ];
 
         $interviewProps = null;
         if ($estimate->status === EstimateStatus::Ready) {
             $interview = InterviewDispatcher::for($estimate);
             $next = $interview->nextQuestionFor($estimate);
+            $isComplete = $next === null;
             $interviewProps = [
                 'next_question' => $next?->toArray(),
-                'is_complete' => $next === null,
+                'is_complete' => $isComplete,
                 'catalog' => $interview->catalog(),
             ];
+
+            // Backfill: estimates completed before line-item emission was
+            // deployed have no rows yet. Emit on first visit so they
+            // don't need a manual retry.
+            if ($isComplete && $estimate->activeLineItems->isEmpty()) {
+                $drafts = LineItemEmitterDispatcher::for($estimate)->emit($estimate);
+                app(LineItemReconciler::class)->reconcile($estimate, $drafts);
+                $estimate->load('activeLineItems');
+            }
         }
 
         $floorplanPages = $estimate->floorplanPages
@@ -146,10 +157,26 @@ class EstimateController extends Controller
             ->values()
             ->all();
 
+        $lineItems = $estimate->activeLineItems
+            ->map(fn ($li) => [
+                'id' => $li->id,
+                'key' => $li->key,
+                'label' => $li->label,
+                'category' => $li->category->value,
+                'category_label' => $li->category->label(),
+                'quantity' => (float) $li->quantity,
+                'unit' => $li->unit->abbreviation(),
+                'unit_price' => $li->unit_price !== null ? (float) $li->unit_price : null,
+                'notes' => $li->notes,
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render('estimates/edit', [
             'estimate' => $serialized,
             'interview' => $interviewProps,
             'floorplan_pages' => $floorplanPages,
+            'line_items' => $lineItems,
         ]);
     }
 
@@ -209,6 +236,8 @@ class EstimateController extends Controller
             $estimate->floorplanPages()->delete();
         }
 
+        $estimate->lineItems()->delete();
+
         // Retry regenerates rooms with new ids, so any stored room-scoped
         // answers in interview_answers would orphan. Reset to a clean
         // nested shape so the interview restarts from scratch.
@@ -222,7 +251,7 @@ class EstimateController extends Controller
             'debug_log' => $debugLog === [] ? null : $debugLog,
             'interview_answers' => [
                 'rooms' => new \ArrayObject,
-                'long_tail' => new \ArrayObject,
+                'project_wide' => new \ArrayObject,
             ],
         ])->save();
 
@@ -257,6 +286,24 @@ class EstimateController extends Controller
         return redirect()
             ->route('estimates.index')
             ->with('status', 'estimate-deleted');
+    }
+
+    public function updateLineItem(
+        Request $request,
+        Estimate $estimate,
+        int $lineItem,
+    ): RedirectResponse {
+        $item = $estimate->activeLineItems()->findOrFail($lineItem);
+
+        $validated = $request->validate([
+            'unit_price' => ['present', 'nullable', 'numeric', 'min:0', 'max:99999999.99'],
+        ]);
+
+        $item->update([
+            'unit_price' => $validated['unit_price'],
+        ]);
+
+        return back();
     }
 
     public function pdf(Estimate $estimate): StreamedResponse

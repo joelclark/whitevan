@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Storage;
     'total_sqft',
     'status',
     'interview_answers',
-    'line_item_prices',
+
     'agent_errors',
     'debug_log',
     'floorplan_assets_status',
@@ -46,7 +46,7 @@ class Estimate extends Model
             'floorplan_assets_status' => FloorplanAssetsStatus::class,
             'total_sqft' => 'integer',
             'interview_answers' => AsArrayObject::class,
-            'line_item_prices' => AsArrayObject::class,
+
             'agent_errors' => 'array',
             'debug_log' => 'array',
         ];
@@ -70,6 +70,8 @@ class Estimate extends Model
             if ($imagePaths !== []) {
                 Storage::disk('local')->delete($imagePaths);
             }
+
+            $estimate->lineItems()->delete();
         });
     }
 
@@ -84,6 +86,24 @@ class Estimate extends Model
     public function rooms(): HasMany
     {
         return $this->hasMany(EstimateRoom::class)->orderBy('position');
+    }
+
+    /**
+     * @return HasMany<EstimateLineItem, $this>
+     */
+    public function lineItems(): HasMany
+    {
+        return $this->hasMany(EstimateLineItem::class)->orderBy('position');
+    }
+
+    /**
+     * @return HasMany<EstimateLineItem, $this>
+     */
+    public function activeLineItems(): HasMany
+    {
+        return $this->hasMany(EstimateLineItem::class)
+            ->whereNull('deprecated_at')
+            ->orderBy('position');
     }
 
     /**

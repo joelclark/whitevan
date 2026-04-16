@@ -8,23 +8,27 @@ import { index as estimatesIndex } from '@/routes/estimates';
 import type {
     Auth,
     Estimate,
+    EstimateLineItem,
     EstimateRoom,
     FloorplanPagePreview,
     InterviewProps,
 } from '@/types';
 import EstimateRecordHeader from './estimate-record-header';
+import LineItemsPanel from './line-items-panel';
 import RoomsList from './rooms-list';
 
 type Props = {
     estimate: Estimate & { rooms: EstimateRoom[] };
     interview: InterviewProps | null;
     floorplan_pages: FloorplanPagePreview[];
+    line_items: EstimateLineItem[];
 };
 
 export default function EstimatesEdit({
     estimate,
     interview,
     floorplan_pages,
+    line_items,
 }: Props) {
     const { auth } = usePage<{ auth: Auth }>().props;
     const isProcessing = estimate.status === 'processing';
@@ -40,7 +44,12 @@ export default function EstimatesEdit({
 
         const interval = window.setInterval(() => {
             router.reload({
-                only: ['estimate', 'interview', 'floorplan_pages'],
+                only: [
+                    'estimate',
+                    'interview',
+                    'floorplan_pages',
+                    'line_items',
+                ],
             });
         }, 2000);
 
@@ -165,15 +174,17 @@ export default function EstimatesEdit({
                         )}
                     </section>
 
-                    <section className="rounded-xl border bg-muted/20 p-6 text-muted-foreground">
-                        <h2 className="mb-2 text-lg font-semibold text-foreground">
-                            Line item prices
-                        </h2>
-                        <p className="text-sm">
-                            Coming soon — priced line items derived from the
-                            interview.
-                        </p>
-                    </section>
+                    {line_items.length > 0 && (
+                        <section>
+                            <h2 className="mb-4 text-lg font-semibold">
+                                Line Items
+                            </h2>
+                            <LineItemsPanel
+                                estimateId={estimate.id}
+                                lineItems={line_items}
+                            />
+                        </section>
+                    )}
 
                     {canViewDebugLog && estimate.debug_log && (
                         <details className="group rounded-xl border bg-muted/10 open:bg-muted/20">

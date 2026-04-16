@@ -15,7 +15,7 @@ export type Trade = 'flooring';
 
 export type InterviewAnswers = {
     rooms: Record<string, Record<string, string | number>>;
-    long_tail: Record<string, string | number>;
+    project_wide: Record<string, string | number>;
 };
 
 export type QuestionShape = {
@@ -29,7 +29,7 @@ export type QuestionShape = {
 };
 
 export type PendingQuestionShape = QuestionShape & {
-    phase: 'room' | 'long_tail' | 'done';
+    phase: 'room' | 'project_wide' | 'done';
     room_id: number | null;
     room_name: string | null;
     room_index: number;
@@ -38,13 +38,25 @@ export type PendingQuestionShape = QuestionShape & {
 
 export type InterviewCatalog = {
     room: QuestionShape[];
-    long_tail: QuestionShape[];
+    project_wide: QuestionShape[];
 };
 
 export type InterviewProps = {
     next_question: PendingQuestionShape | null;
     is_complete: boolean;
     catalog: InterviewCatalog;
+};
+
+export type EstimateLineItem = {
+    id: number;
+    key: string;
+    label: string;
+    category: string;
+    category_label: string;
+    quantity: number;
+    unit: string;
+    unit_price: number | null;
+    notes: string | null;
 };
 
 export type EstimateRoom = {
@@ -71,7 +83,7 @@ export type Estimate = {
     status: EstimateStatus;
     floorplan_assets_status: FloorplanAssetsStatus | null;
     interview_answers: InterviewAnswers;
-    line_item_prices: Record<string, number | null>;
+    line_items?: EstimateLineItem[];
     agent_errors: string[];
     debug_log: Record<string, unknown> | null;
     created_at: string;

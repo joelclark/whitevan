@@ -6,12 +6,13 @@ use App\Models\Customer;
 use App\Models\Estimate;
 use App\Models\EstimateRoom;
 use App\Trades\Flooring\Interview\FlooringInterview;
-use App\Trades\Flooring\Interview\Questions\LongTail\BaseboardsQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\DemoHaulAwayQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\DoorUndercutsQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\QuarterRoundQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\ToiletPullsQuestion;
-use App\Trades\Flooring\Interview\Questions\LongTail\TransitionsQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\BaseboardsQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\CustomerTypeQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\DemoHaulAwayQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\DoorUndercutsQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\QuarterRoundQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\ToiletPullsQuestion;
+use App\Trades\Flooring\Interview\Questions\ProjectWide\TransitionsQuestion;
 use App\Trades\Flooring\Interview\Questions\Room\ExistingQuestion;
 use App\Trades\Flooring\Interview\Questions\Room\FurnitureQuestion;
 use App\Trades\Flooring\Interview\Questions\Room\HeavyCountQuestion;
@@ -71,9 +72,9 @@ test('asks room questions in order: material, existing, subfloor, furniture', fu
         });
     }
 
-    // Now should fall through to long-tail.
+    // Now should fall through to the project-wide phase.
     $pending = $interview->nextQuestionFor($estimate);
-    expect($pending->phase)->toBe(Phase::LongTail);
+    expect($pending->phase)->toBe(Phase::ProjectWide);
 });
 
 test('heavy_count is skipped when furniture is not heavy', function () {
@@ -85,10 +86,10 @@ test('heavy_count is skipped when furniture is not heavy', function () {
         $interview->recordAnswerFor($estimate, $k, $room->id, $v);
     }
 
-    // heavy_count should not be asked; long-tail should begin.
+    // heavy_count should not be asked; project-wide phase should begin.
     $pending = $interview->nextQuestionFor($estimate);
-    expect($pending->phase)->toBe(Phase::LongTail);
-    expect($pending->question->key())->toBe('demo_haul_away');
+    expect($pending->phase)->toBe(Phase::ProjectWide);
+    expect($pending->question->key())->toBe('customer_type');
 });
 
 test('heavy_count is asked when furniture is heavy', function () {
@@ -123,7 +124,7 @@ test('recording furniture=empty clears an orphan heavy_count', function () {
     expect($answers['rooms'][(string) $room->id])->not->toHaveKey('heavy_count');
 });
 
-test('long-tail questions are asked in order after all room questions', function () {
+test('project-wide questions are asked in order after all room questions', function () {
     $estimate = estimateWithRooms(1);
     $interview = app(FlooringInterview::class);
     $room = $estimate->rooms->first();
@@ -132,7 +133,7 @@ test('long-tail questions are asked in order after all room questions', function
         $interview->recordAnswerFor($estimate, $k, $room->id, $v);
     }
 
-    $expected = ['demo_haul_away', 'baseboards', 'quarter_round', 'transitions', 'door_undercuts', 'toilet_pulls'];
+    $expected = ['customer_type', 'demo_haul_away', 'baseboards', 'quarter_round', 'transitions', 'door_undercuts', 'toilet_pulls'];
 
     foreach ($expected as $key) {
         $pending = $interview->nextQuestionFor($estimate);
@@ -140,6 +141,7 @@ test('long-tail questions are asked in order after all room questions', function
         expect($pending->question->key())->toBe($key);
 
         $interview->recordAnswerFor($estimate, $key, null, match ($key) {
+            'customer_type' => 'person',
             'demo_haul_away' => 'van',
             'baseboards' => 'leave',
             'quarter_round' => 'new',
@@ -151,15 +153,15 @@ test('long-tail questions are asked in order after all room questions', function
     expect($interview->isComplete($estimate))->toBeTrue();
 });
 
-test('empty rooms list goes straight to long-tail phase', function () {
+test('empty rooms list goes straight to project-wide phase', function () {
     $estimate = estimateWithRooms(0);
     $interview = app(FlooringInterview::class);
 
     $pending = $interview->nextQuestionFor($estimate);
 
     expect($pending)->not->toBeNull();
-    expect($pending->phase)->toBe(Phase::LongTail);
-    expect($pending->question->key())->toBe('demo_haul_away');
+    expect($pending->phase)->toBe(Phase::ProjectWide);
+    expect($pending->question->key())->toBe('customer_type');
     expect($pending->totalRooms)->toBe(0);
 });
 
@@ -184,7 +186,7 @@ test('room phase question without room_id fails validation', function () {
         ->toThrow(ValidationException::class);
 });
 
-test('long-tail phase question with room_id fails validation', function () {
+test('project-wide phase question with room_id fails validation', function () {
     $estimate = estimateWithRooms(1);
     $interview = app(FlooringInterview::class);
     $room = $estimate->rooms->first();
@@ -221,8 +223,9 @@ test('room question ordering constant contains all five room questions in fixed 
     ]);
 });
 
-test('long-tail question ordering constant contains all six long-tail questions in fixed order', function () {
-    expect(FlooringInterview::LONG_TAIL_QUESTIONS)->toBe([
+test('project-wide question ordering constant contains all project-wide questions in fixed order', function () {
+    expect(FlooringInterview::PROJECT_WIDE_QUESTIONS)->toBe([
+        CustomerTypeQuestion::class,
         DemoHaulAwayQuestion::class,
         BaseboardsQuestion::class,
         QuarterRoundQuestion::class,

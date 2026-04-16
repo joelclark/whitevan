@@ -32,7 +32,6 @@ class EstimateFactory extends Factory
             'total_sqft' => fake()->numberBetween(200, 4000),
             'status' => EstimateStatus::Ready,
             'interview_answers' => [],
-            'line_item_prices' => [],
             'agent_errors' => [],
         ];
     }
