@@ -23,6 +23,8 @@ enum ActivityEvent: string
     case EstimateAgentFailed = 'estimate.agent_failed';
     case EstimateFloorplanAssetsFailed = 'estimate.floorplan_assets_failed';
     case EstimateInterviewCompleted = 'estimate.interview_completed';
+    case EstimateQuoteSent = 'estimate.quote_sent';
+    case EstimateQuoteViewed = 'estimate.quote_viewed';
     case AiAgentSettingUpdated = 'ai.agent_setting_updated';
 
     public function label(): string
@@ -47,6 +49,8 @@ enum ActivityEvent: string
             self::EstimateAgentFailed => 'Estimate agent run failed',
             self::EstimateFloorplanAssetsFailed => 'Estimate floorplan asset extraction failed',
             self::EstimateInterviewCompleted => 'Estimate interview completed',
+            self::EstimateQuoteSent => 'Quote sent',
+            self::EstimateQuoteViewed => 'Quote viewed by customer',
             self::AiAgentSettingUpdated => 'AI agent setting updated',
         };
     }

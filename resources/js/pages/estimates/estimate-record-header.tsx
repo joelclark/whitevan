@@ -1,7 +1,15 @@
 import { Form, Link } from '@inertiajs/react';
-import { FileText, MoreHorizontal, RefreshCw, User } from 'lucide-react';
+import {
+    ExternalLink,
+    FileText,
+    MoreHorizontal,
+    RefreshCw,
+    Send,
+    User,
+} from 'lucide-react';
 import { useState } from 'react';
 import EstimateController from '@/actions/App/Http/Controllers/EstimateController';
+import QuoteController from '@/actions/App/Http/Controllers/QuoteController';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,12 +22,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { edit as customersEdit } from '@/routes/customers';
 import { pdf as estimatesPdf } from '@/routes/estimates';
+import { show as quotesShow } from '@/routes/quotes';
 import type { Estimate, EstimateStatus } from '@/types';
 import DeleteEstimateDialog from './delete-estimate-dialog';
 import ResubmitEstimateDialog from './resubmit-estimate-dialog';
 
 type Props = {
     estimate: Estimate;
+    allLineItemsPriced: boolean;
 };
 
 function statusBadge(status: EstimateStatus) {
@@ -37,7 +47,10 @@ function statusBadge(status: EstimateStatus) {
     }
 }
 
-export default function EstimateRecordHeader({ estimate }: Props) {
+export default function EstimateRecordHeader({
+    estimate,
+    allLineItemsPriced,
+}: Props) {
     const [isEditingTitle, setIsEditingTitle] = useState(false);
 
     const customer = estimate.customer;
@@ -133,6 +146,43 @@ export default function EstimateRecordHeader({ estimate }: Props) {
                         Open PDF
                     </a>
                 </Button>
+
+                {estimate.status === 'ready' &&
+                    !estimate.quote_status &&
+                    allLineItemsPriced && (
+                        <Form
+                            {...QuoteController.send.form(estimate.id)}
+                            options={{ preserveScroll: true }}
+                        >
+                            {({ processing }) => (
+                                <Button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="h-12 px-5 text-base"
+                                >
+                                    <Send className="mr-2 h-4 w-4" />
+                                    {processing ? 'Sending...' : 'Send Quote'}
+                                </Button>
+                            )}
+                        </Form>
+                    )}
+
+                {estimate.quote_status === 'sent' && estimate.quote_token && (
+                    <Button
+                        asChild
+                        variant="outline"
+                        className="h-12 px-5 text-base"
+                    >
+                        <a
+                            href={quotesShow(estimate.quote_token).url}
+                            target="_blank"
+                            rel="noreferrer"
+                        >
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            View Quote
+                        </a>
+                    </Button>
+                )}
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>

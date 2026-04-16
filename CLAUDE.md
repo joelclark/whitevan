@@ -94,11 +94,12 @@ Fortify handles authentication (login, registration, password reset, email verif
 - `routes/settings.php` — profile, password, 2FA, appearance (auth + verified + `not-impersonating`)
 - `routes/admin.php` — account admin routes (auth + verified + can:manage-users)
 - `routes/sysops.php` — sysop admin routes (auth + verified + sysop)
+- `routes/quotes.php` — public quote viewing (no auth, token-gated) + authenticated send-quote endpoint
 - Middleware aliases (in `bootstrap/app.php`): `sysop` → `EnsureSysop`, `not-impersonating` → `BlockDuringImpersonation`.
 
 ### Frontend
 - Pages: `resources/js/pages/` — Inertia auto-discovers page components
-- Layouts: `resources/js/layouts/` — `app-layout.tsx` (main), `auth-layout.tsx` (auth), `settings-layout.tsx`, `admin/layout.tsx`, `sysops-layout.tsx`
+- Layouts: `resources/js/layouts/` — `app-layout.tsx` (main), `auth-layout.tsx` (auth), `settings-layout.tsx`, `admin/layout.tsx`, `sysops-layout.tsx`, `quote-layout.tsx` (public, no auth)
 - UI components: `resources/js/components/ui/` — Radix UI primitives with Tailwind
 - Wayfinder-generated route helpers: `resources/js/actions/` and `resources/js/routes/` (do not edit manually)
 - Shared Inertia props (user, account, app name) configured in `HandleInertiaRequests` middleware
@@ -135,20 +136,30 @@ Any feature that changes user or account state, or represents a security-relevan
 - **Debug log namespacing.** `debug_log` is shared between the AI job and the floorplan job. The AI job writes top-level `request`/`response`/`status`/`exception`. The floorplan job writes everything under a `floorplan` key. The retry endpoint deletes the `floorplan` key but preserves the AI portion. Don't write top-level keys from the floorplan job.
 
 #### Line Items
-- **Estimate and quote are the same entity** at different stages of readiness. There is no separate quote table. Line items stay editable until a deposit is paid (future feature). Status progression (draft → sent → accepted → deposited) will be a column on estimates, not a new model.
+- **Estimate and quote are the same entity** at different stages of readiness. There is no separate quote table. Line items stay editable until a deposit is paid (future feature). The `quote_status` column (`QuoteStatus` enum: `Sent`) tracks the quote lifecycle independently of `status` (Processing/Ready/Failed). Future progression: Accepted → Deposited.
 - **Line items are emitted deterministically** from interview answers on completion. `TradeLineItemEmitter` interface mirrors `TradeInterview` — one implementation per trade, dispatched via `LineItemEmitterDispatcher::for(Estimate)`. The emitter is a pure function: (rooms + answers) → ordered `LineItemDraft[]` DTOs. No AI involved.
 - **Persistence & reconciliation**: `estimate_line_items` table keyed by `(estimate_id, key)`. `EstimateLineItem` model does NOT use `BelongsToAccount` — scoped transitively via estimate. `LineItemReconciler` handles all writes — it matches drafts to existing rows by `key`, creates new items, updates quantities on existing ones, and soft-deprecates items no longer emitted (sets `deprecated_at`). If a previously deprecated item's key reappears in a later emission, the reconciler un-deprecates it — preserving its `unit_price`. Reconciliation runs on every answer change while the interview is complete, not just on the first completion transition.
 - **Active vs all**: `Estimate::activeLineItems()` filters to `whereNull('deprecated_at')` — used for serialization and the `updateLineItem` guard. `Estimate::lineItems()` returns all rows including deprecated — used by retry (hard-delete) and the reconciler itself.
 - **Flooring emitter** (`app/Trades/Flooring/LineItems/FlooringLineItemEmitter.php`) maps each interview answer to zero or more line items. Aggregation rules: install items sum sqft by material, demo items sum sqft by existing floor type (skip `bare`), subfloor items sum sqft by prep type (skip `none`), furniture counts rooms or heavy_count, trim items use linear_feet, service items use counts or flat `1`.
 - **Enums**: `LineItemCategory` (Demo, Prep, Install, Trim, Services) and `LineItemUnit` (Sqft, LinearFeet, Each) in `app/Enums/`.
 - **Adding a new trade**: implement `TradeLineItemEmitter`, add a `case` in `LineItemEmitterDispatcher`, and create emitter-specific tests. The interface + dispatcher pattern is identical to the interview system.
-- **`unit_price` column** exists on `estimate_line_items` (nullable decimal). No UI yet — ready for the pricing phase.
+- **`unit_price` column** exists on `estimate_line_items` (nullable decimal). Pricing UI is live on the estimate edit page; all active items must be priced before a quote can be sent.
+
+#### Quotes
+- **Quote = published estimate.** Setting `quote_status = Sent` makes the estimate visible to the customer via a public magic link. `QuoteController::send` guards on `status === Ready` and all active line items having `unit_price` set.
+- **Magic link.** `quote_token` (ULID, unique) is generated once on first send and never changes. Public URL: `GET /quotes/{token}` — no auth required, never expires. The token provides access control (128-bit entropy, unguessable). `QuoteController::show` uses `Estimate::withoutGlobalScope('account')` since there's no authenticated user context.
+- **Change detection.** `quote_customer_viewed_at` timestamp records each customer page load. `Estimate::hasChangedSinceCustomerViewed()` compares this against `latestContentChange()` which takes `max(estimate.updated_at, max(activeLineItems.updated_at))` — so line-item price edits are detected without needing to touch the parent row.
+- **Public floorplan images.** `QuoteController::floorplanPage` mirrors `EstimateController::floorplanPage` but resolves the estimate via token instead of account-scoped route-model binding.
+- **Routes.** `routes/quotes.php`: public `GET /quotes/{token}` and `GET /quotes/{token}/floorplan-pages/{page}`; authenticated `POST /estimates/{estimate}/send-quote`.
+- **Frontend.** `resources/js/pages/quotes/show.tsx` uses `quote-layout.tsx` (minimal public layout — no sidebar, no auth). Rooms with floorplan images, read-only line items grouped by category, grand total. "Updated since last view" banner when `has_changed` is true.
+- **Activity events.** `EstimateQuoteSent` fires on send/re-send; `EstimateQuoteViewed` fires on each customer page load (with explicit account param since no auth context).
+- **No emails/notifications yet.** The "View Quote" link on the estimate edit page lets the internal user preview what the customer sees. Email delivery is a future phase.
 
 ### Validation Concerns
 `PasswordValidationRules` and `ProfileValidationRules` traits in `app/Concerns/` provide reusable validation rule sets shared between Fortify actions and form requests.
 
 ### Git Commits
-- Message format: `type: short description` (lowercase, no period). Types: `feature`, `fix`, `ops`, `refactor`, `test`, `docs`.
+- Message format: `type: short description` (lowercase, no period). Types: `feature`, `fix`, `ops`, `refactor`, `test`, `docs`.  No agent attribution in commit messages.
 
 ### Database
 SQLite in dev, production is PostgreSQL 18. Seeders must be idempotent (use `updateOrCreate`/`firstOrCreate`) and must never create data with timestamps in the future — clamp or skip any generated timestamp that lands after `now()`. All seed data goes in `DevSeeder`; `DatabaseSeeder` stays empty.  All FKs require indexes.  Never configure cascade-on-delete without discussion.

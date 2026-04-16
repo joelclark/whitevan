@@ -74,7 +74,13 @@ export default function EstimatesEdit({
                     </Button>
                 </div>
 
-                <EstimateRecordHeader estimate={estimate} />
+                <EstimateRecordHeader
+                    estimate={estimate}
+                    allLineItemsPriced={
+                        line_items.length > 0 &&
+                        line_items.every((item) => item.unit_price !== null)
+                    }
+                />
 
                 <div className="mt-8 max-w-4xl space-y-8">
                     <section>
