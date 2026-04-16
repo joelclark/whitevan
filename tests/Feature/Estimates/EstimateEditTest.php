@@ -4,8 +4,122 @@ use App\Enums\EstimateStatus;
 use App\Models\Account;
 use App\Models\Customer;
 use App\Models\Estimate;
+use App\Models\EstimateLineItem;
 use App\Models\EstimateRoom;
 use Inertia\Testing\AssertableInertia as Assert;
+
+test('guests are redirected to login', function () {
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    $estimate = Estimate::factory()->forCustomer($customer)->create();
+
+    $this->get(route('estimates.edit', $estimate))
+        ->assertRedirect(route('login'));
+});
+
+test('another account cannot view the estimate', function () {
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    $estimate = Estimate::factory()->forCustomer($customer)->create();
+
+    $intruder = Account::factory()->create();
+
+    $this->actingAs($intruder->owner)
+        ->get(route('estimates.edit', $estimate))
+        ->assertNotFound();
+});
+
+test('backfills line items on first visit to a completed estimate with none', function () {
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    $estimate = Estimate::factory()->forCustomer($customer)->create([
+        'status' => EstimateStatus::Ready,
+        'interview_answers' => [
+            'rooms' => [
+                '1' => [
+                    'material' => 'lvp',
+                    'existing' => 'carpet',
+                    'subfloor' => 'none',
+                    'furniture' => 'empty',
+                ],
+            ],
+            'project_wide' => [
+                'customer_type' => 'person',
+                'demo_haul_away' => 'van',
+                'baseboards' => 'leave',
+                'quarter_round' => 'new',
+                'transitions' => 2,
+                'door_undercuts' => 1,
+                'toilet_pulls' => 0,
+            ],
+        ],
+    ]);
+    EstimateRoom::factory()->create([
+        'estimate_id' => $estimate->id,
+        'id' => 1,
+        'position' => 1,
+    ]);
+
+    expect(EstimateLineItem::where('estimate_id', $estimate->id)->count())->toBe(0);
+
+    $this->actingAs($account->owner)
+        ->get(route('estimates.edit', $estimate))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('estimates/edit')
+            ->has('line_items')
+            ->where('interview.is_complete', true)
+        );
+
+    expect(EstimateLineItem::where('estimate_id', $estimate->id)->count())->toBeGreaterThan(0);
+});
+
+test('backfill does not run when line items already exist', function () {
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    $estimate = Estimate::factory()->forCustomer($customer)->create([
+        'status' => EstimateStatus::Ready,
+        'interview_answers' => [
+            'rooms' => [
+                '1' => [
+                    'material' => 'lvp',
+                    'existing' => 'carpet',
+                    'subfloor' => 'none',
+                    'furniture' => 'empty',
+                ],
+            ],
+            'project_wide' => [
+                'customer_type' => 'person',
+                'demo_haul_away' => 'van',
+                'baseboards' => 'leave',
+                'quarter_round' => 'new',
+                'transitions' => 2,
+                'door_undercuts' => 1,
+                'toilet_pulls' => 0,
+            ],
+        ],
+    ]);
+    EstimateRoom::factory()->create([
+        'estimate_id' => $estimate->id,
+        'id' => 1,
+        'position' => 1,
+    ]);
+
+    EstimateLineItem::factory()->create([
+        'estimate_id' => $estimate->id,
+        'key' => 'install_lvp',
+        'unit_price' => 7.77,
+    ]);
+
+    $this->actingAs($account->owner)
+        ->get(route('estimates.edit', $estimate))
+        ->assertOk();
+
+    $item = EstimateLineItem::where('estimate_id', $estimate->id)
+        ->where('key', 'install_lvp')
+        ->first();
+    expect($item->unit_price)->toBe('7.77');
+});
 
 test('edit page includes an interview next_question when status is ready', function () {
     $account = Account::factory()->create();

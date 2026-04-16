@@ -188,6 +188,64 @@ test('another account cannot update line items', function () {
         ->assertNotFound();
 });
 
+test('unit price rejects negative values', function () {
+    $account = Account::factory()->create();
+    $estimate = lineItemEstimate($account);
+
+    answerAll($this, $estimate, $account);
+
+    $lineItem = EstimateLineItem::where('estimate_id', $estimate->id)->first();
+
+    $this->actingAs($account->owner)
+        ->patch(route('estimates.line-items.update', [$estimate, $lineItem]), [
+            'unit_price' => -1.00,
+        ])
+        ->assertSessionHasErrors('unit_price');
+});
+
+test('unit price rejects non-numeric values', function () {
+    $account = Account::factory()->create();
+    $estimate = lineItemEstimate($account);
+
+    answerAll($this, $estimate, $account);
+
+    $lineItem = EstimateLineItem::where('estimate_id', $estimate->id)->first();
+
+    $this->actingAs($account->owner)
+        ->patch(route('estimates.line-items.update', [$estimate, $lineItem]), [
+            'unit_price' => 'abc',
+        ])
+        ->assertSessionHasErrors('unit_price');
+});
+
+test('unit price rejects values over the max', function () {
+    $account = Account::factory()->create();
+    $estimate = lineItemEstimate($account);
+
+    answerAll($this, $estimate, $account);
+
+    $lineItem = EstimateLineItem::where('estimate_id', $estimate->id)->first();
+
+    $this->actingAs($account->owner)
+        ->patch(route('estimates.line-items.update', [$estimate, $lineItem]), [
+            'unit_price' => 100000000.00,
+        ])
+        ->assertSessionHasErrors('unit_price');
+});
+
+test('unit price requires the field to be present', function () {
+    $account = Account::factory()->create();
+    $estimate = lineItemEstimate($account);
+
+    answerAll($this, $estimate, $account);
+
+    $lineItem = EstimateLineItem::where('estimate_id', $estimate->id)->first();
+
+    $this->actingAs($account->owner)
+        ->patch(route('estimates.line-items.update', [$estimate, $lineItem]), [])
+        ->assertSessionHasErrors('unit_price');
+});
+
 test('deleting an estimate removes its line items', function () {
     $account = Account::factory()->create();
     $estimate = lineItemEstimate($account);

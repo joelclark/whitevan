@@ -73,6 +73,66 @@ test('successful extraction fills the estimate and its rooms', function () {
     );
 });
 
+test('successful extraction writes the expected debug_log structure', function () {
+    Ai::fakeAgent(FloorPlanExtractionAgent::class, [
+        [
+            'title' => 'Debug check',
+            'total_sqft' => 500,
+            'rooms' => [
+                ['name' => 'Hall', 'page' => 1, 'sqft' => 500, 'perimeter' => 90],
+            ],
+            'errors' => [],
+        ],
+    ]);
+
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    Storage::disk('local')->put('estimate-pdfs/dbg.pdf', 'pdfcontents');
+    $estimate = Estimate::factory()->forCustomer($customer)->processing()->create([
+        'pdf_path' => 'estimate-pdfs/dbg.pdf',
+    ]);
+
+    (new ProcessEstimatePdfJob($estimate->id))->handle();
+
+    $debug = $estimate->refresh()->debug_log;
+
+    expect($debug)
+        ->toHaveKeys(['status', 'at', 'request', 'response'])
+        ->and($debug['status'])->toBe('success')
+        ->and($debug['request'])->toHaveKeys(['instructions', 'prompt', 'schema', 'pdf_filename', 'ai_provider'])
+        ->and($debug['response'])->toHaveKeys(['text', 'structured'])
+        ->and($debug['response']['structured']['title'])->toBe('Debug check');
+});
+
+test('failure writes the expected debug_log structure', function () {
+    Ai::fakeAgent(FloorPlanExtractionAgent::class, function () {
+        throw new RuntimeException('Schema mismatch');
+    });
+
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    Storage::disk('local')->put('estimate-pdfs/dbg2.pdf', 'pdfcontents');
+    $estimate = Estimate::factory()->forCustomer($customer)->processing()->create([
+        'pdf_path' => 'estimate-pdfs/dbg2.pdf',
+    ]);
+
+    try {
+        (new ProcessEstimatePdfJob($estimate->id))->handle();
+    } catch (Throwable $e) {
+        // expected
+    }
+
+    $debug = $estimate->refresh()->debug_log;
+
+    expect($debug)
+        ->toHaveKeys(['status', 'at', 'request', 'exception', 'response'])
+        ->and($debug['status'])->toBe('failed')
+        ->and($debug['request'])->toHaveKeys(['instructions', 'prompt', 'schema', 'pdf_filename', 'ai_provider'])
+        ->and($debug['exception'])->toHaveKeys(['class', 'message'])
+        ->and($debug['exception']['message'])->toBe('Schema mismatch')
+        ->and($debug['response'])->toHaveKeys(['status', 'body']);
+});
+
 test('agent errors are stored and the estimate is marked ready when other fields are present', function () {
     Ai::fakeAgent(FloorPlanExtractionAgent::class, [
         [
