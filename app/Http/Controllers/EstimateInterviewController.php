@@ -7,6 +7,8 @@ use App\Enums\ActivityEvent;
 use App\Enums\EstimateStatus;
 use App\Http\Requests\EstimateInterviewAnswerRequest;
 use App\Interviews\InterviewDispatcher;
+use App\Interviews\LineItemEmitterDispatcher;
+use App\Interviews\LineItemReconciler;
 use App\Models\Estimate;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
@@ -40,12 +42,20 @@ class EstimateInterviewController extends Controller
 
         $estimate->save();
 
-        if (! $wasCompleteBefore && $interview->isComplete($estimate)) {
+        $isNowComplete = $interview->isComplete($estimate);
+
+        if ($isNowComplete) {
+            $drafts = LineItemEmitterDispatcher::for($estimate)->emit($estimate);
+            app(LineItemReconciler::class)->reconcile($estimate, $drafts);
+        }
+
+        if (! $wasCompleteBefore && $isNowComplete) {
             ActivityLogger::event(
                 ActivityEvent::EstimateInterviewCompleted,
                 metadata: [
                     'estimate_id' => $estimate->id,
                     'customer_id' => $estimate->customer_id,
+                    'line_items_count' => count($drafts),
                 ],
                 account: $account,
                 user: $request->user(),

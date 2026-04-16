@@ -18,4 +18,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('estimates.floorplan-page');
     Route::post('estimates/{estimate}/interview/answer', [EstimateInterviewController::class, 'store'])
         ->name('estimates.interview.answer');
+    Route::patch('estimates/{estimate}/line-items/{lineItem}', [EstimateController::class, 'updateLineItem'])
+        ->name('estimates.line-items.update');
 });

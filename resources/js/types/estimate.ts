@@ -47,6 +47,18 @@ export type InterviewProps = {
     catalog: InterviewCatalog;
 };
 
+export type EstimateLineItem = {
+    id: number;
+    key: string;
+    label: string;
+    category: string;
+    category_label: string;
+    quantity: number;
+    unit: string;
+    unit_price: number | null;
+    notes: string | null;
+};
+
 export type EstimateRoom = {
     id: number;
     estimate_id: number;
@@ -71,7 +83,7 @@ export type Estimate = {
     status: EstimateStatus;
     floorplan_assets_status: FloorplanAssetsStatus | null;
     interview_answers: InterviewAnswers;
-    line_item_prices: Record<string, number | null>;
+    line_items?: EstimateLineItem[];
     agent_errors: string[];
     debug_log: Record<string, unknown> | null;
     created_at: string;
