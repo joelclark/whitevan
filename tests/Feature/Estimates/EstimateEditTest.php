@@ -61,7 +61,8 @@ test('edit page reports is_complete when all questions are answered', function (
                     'furniture' => 'empty',
                 ],
             ],
-            'long_tail' => [
+            'project_wide' => [
+                'customer_type' => 'person',
                 'demo_haul_away' => 'van',
                 'baseboards' => 'leave',
                 'quarter_round' => 'new',

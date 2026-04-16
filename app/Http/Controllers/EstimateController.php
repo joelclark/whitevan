@@ -119,10 +119,10 @@ class EstimateController extends Controller
         $serialized = $estimate->toArray();
         $raw = $estimate->interview_answers;
         $rooms = $raw['rooms'] ?? [];
-        $longTail = $raw['long_tail'] ?? [];
+        $projectWide = $raw['project_wide'] ?? [];
         $serialized['interview_answers'] = [
             'rooms' => (object) ($rooms instanceof \ArrayObject ? $rooms->getArrayCopy() : (array) $rooms),
-            'long_tail' => (object) ($longTail instanceof \ArrayObject ? $longTail->getArrayCopy() : (array) $longTail),
+            'project_wide' => (object) ($projectWide instanceof \ArrayObject ? $projectWide->getArrayCopy() : (array) $projectWide),
         ];
 
         $interviewProps = null;
@@ -222,7 +222,7 @@ class EstimateController extends Controller
             'debug_log' => $debugLog === [] ? null : $debugLog,
             'interview_answers' => [
                 'rooms' => new \ArrayObject,
-                'long_tail' => new \ArrayObject,
+                'project_wide' => new \ArrayObject,
             ],
         ])->save();
 

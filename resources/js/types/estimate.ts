@@ -15,7 +15,7 @@ export type Trade = 'flooring';
 
 export type InterviewAnswers = {
     rooms: Record<string, Record<string, string | number>>;
-    long_tail: Record<string, string | number>;
+    project_wide: Record<string, string | number>;
 };
 
 export type QuestionShape = {
@@ -29,7 +29,7 @@ export type QuestionShape = {
 };
 
 export type PendingQuestionShape = QuestionShape & {
-    phase: 'room' | 'long_tail' | 'done';
+    phase: 'room' | 'project_wide' | 'done';
     room_id: number | null;
     room_name: string | null;
     room_index: number;
@@ -38,7 +38,7 @@ export type PendingQuestionShape = QuestionShape & {
 
 export type InterviewCatalog = {
     room: QuestionShape[];
-    long_tail: QuestionShape[];
+    project_wide: QuestionShape[];
 };
 
 export type InterviewProps = {

@@ -30,7 +30,7 @@ interface TradeInterview
      * Used by the review panel to render editable rows for any answered
      * question without re-walking the interview.
      *
-     * @return array{room: list<array<string, mixed>>, long_tail: list<array<string, mixed>>}
+     * @return array{room: list<array<string, mixed>>, project_wide: list<array<string, mixed>>}
      */
     public function catalog(): array;
 }

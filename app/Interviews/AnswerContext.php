@@ -6,11 +6,11 @@ final readonly class AnswerContext
 {
     /**
      * @param  array<string, array<string, string|int>>  $rooms  Room answers keyed by stringified room id.
-     * @param  array<string, string|int>  $longTail
+     * @param  array<string, string|int>  $projectWide
      */
     public function __construct(
         public array $rooms,
-        public array $longTail,
+        public array $projectWide,
         public ?int $currentRoomId,
         public Phase $phase,
     ) {}

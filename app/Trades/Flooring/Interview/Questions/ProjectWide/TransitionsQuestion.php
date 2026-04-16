@@ -1,21 +1,21 @@
 <?php
 
-namespace App\Trades\Flooring\Interview\Questions\LongTail;
+namespace App\Trades\Flooring\Interview\Questions\ProjectWide;
 
 use App\Interviews\Question;
 use App\Interviews\QuestionType;
 use Illuminate\Validation\ValidationException;
 
-class ToiletPullsQuestion extends Question
+class TransitionsQuestion extends Question
 {
     public function key(): string
     {
-        return 'toilet_pulls';
+        return 'transitions';
     }
 
     public function label(): string
     {
-        return 'How many toilets need to be pulled and reset?';
+        return 'How many transition strips job-wide?';
     }
 
     public function type(): QuestionType

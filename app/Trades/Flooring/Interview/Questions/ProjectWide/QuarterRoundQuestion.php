@@ -1,21 +1,21 @@
 <?php
 
-namespace App\Trades\Flooring\Interview\Questions\LongTail;
+namespace App\Trades\Flooring\Interview\Questions\ProjectWide;
 
 use App\Interviews\Question;
 use App\Interviews\QuestionType;
 use Illuminate\Validation\ValidationException;
 
-class BaseboardsQuestion extends Question
+class QuarterRoundQuestion extends Question
 {
     public function key(): string
     {
-        return 'baseboards';
+        return 'quarter_round';
     }
 
     public function label(): string
     {
-        return 'What happens with the baseboards?';
+        return 'What about quarter round?';
     }
 
     public function type(): QuestionType
@@ -26,9 +26,9 @@ class BaseboardsQuestion extends Question
     public function options(): array
     {
         return [
-            'leave' => 'Leave',
-            'remove_reinstall' => 'Remove & Reinstall',
-            'remove_replace' => 'Remove & Replace',
+            'none' => 'None',
+            'new' => 'New',
+            'reuse' => 'Reuse',
         ];
     }
 
@@ -36,7 +36,7 @@ class BaseboardsQuestion extends Question
     {
         if (! is_string($raw) || ! array_key_exists($raw, $this->options())) {
             throw ValidationException::withMessages([
-                'value' => 'Choose one of the listed baseboard options.',
+                'value' => 'Choose one of the listed quarter-round options.',
             ]);
         }
 

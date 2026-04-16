@@ -1,21 +1,21 @@
 <?php
 
-namespace App\Trades\Flooring\Interview\Questions\LongTail;
+namespace App\Trades\Flooring\Interview\Questions\ProjectWide;
 
 use App\Interviews\Question;
 use App\Interviews\QuestionType;
 use Illuminate\Validation\ValidationException;
 
-class TransitionsQuestion extends Question
+class DoorUndercutsQuestion extends Question
 {
     public function key(): string
     {
-        return 'transitions';
+        return 'door_undercuts';
     }
 
     public function label(): string
     {
-        return 'How many transition strips job-wide?';
+        return 'How many doors need to be undercut?';
     }
 
     public function type(): QuestionType

@@ -63,7 +63,7 @@ test('retry wipes existing interview answers so room-scoped data does not orphan
         'status' => EstimateStatus::Ready,
         'interview_answers' => [
             'rooms' => ['99' => ['material' => 'lvp']],
-            'long_tail' => ['demo_haul_away' => 'van'],
+            'project_wide' => ['demo_haul_away' => 'van'],
         ],
     ]);
 
@@ -73,7 +73,7 @@ test('retry wipes existing interview answers so room-scoped data does not orphan
 
     $estimate->refresh();
     expect((array) $estimate->interview_answers['rooms'])->toBe([]);
-    expect((array) $estimate->interview_answers['long_tail'])->toBe([]);
+    expect((array) $estimate->interview_answers['project_wide'])->toBe([]);
 });
 
 test('an in-flight estimate cannot be resubmitted', function () {

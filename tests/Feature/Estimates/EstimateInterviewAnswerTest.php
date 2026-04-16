@@ -158,6 +158,7 @@ test('completing the interview fires EstimateInterviewCompleted exactly once', f
     $post(answer($estimate, 'furniture', 'empty', $room->id));
 
     // Long tail.
+    $post(answer($estimate, 'customer_type', 'person'));
     $post(answer($estimate, 'demo_haul_away', 'van'));
     $post(answer($estimate, 'baseboards', 'leave'));
     $post(answer($estimate, 'quarter_round', 'new'));

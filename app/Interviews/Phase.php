@@ -5,6 +5,6 @@ namespace App\Interviews;
 enum Phase: string
 {
     case Room = 'room';
-    case LongTail = 'long_tail';
+    case ProjectWide = 'project_wide';
     case Done = 'done';
 }

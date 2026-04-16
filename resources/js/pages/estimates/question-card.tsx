@@ -9,7 +9,7 @@ export type InterviewAction = ReturnType<
 
 export type NormalizedAnswers = {
     rooms: Record<string, Record<string, string | number>>;
-    long_tail: Record<string, string | number>;
+    project_wide: Record<string, string | number>;
 };
 
 export function normalizeAnswers(
@@ -18,11 +18,11 @@ export function normalizeAnswers(
     // Laravel's AsArrayObject cast flattens empty inner maps to [] during
     // serialization. Treat an array as an empty map on the JS side.
     const rooms = Array.isArray(raw?.rooms) ? {} : (raw?.rooms ?? {});
-    const long_tail = Array.isArray(raw?.long_tail)
+    const project_wide = Array.isArray(raw?.project_wide)
         ? {}
-        : (raw?.long_tail ?? {});
+        : (raw?.project_wide ?? {});
 
-    return { rooms, long_tail };
+    return { rooms, project_wide };
 }
 
 export function formatAnswerValue(

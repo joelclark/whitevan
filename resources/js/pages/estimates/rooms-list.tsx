@@ -43,15 +43,15 @@ export default function RoomsList({
     const floorplanStatus = estimate.floorplan_assets_status;
     const previewByPage = new Map(floorplanPages.map((p) => [p.page, p]));
     const pendingRoomId = pending?.phase === 'room' ? pending.room_id : null;
-    const longTailActive = pending?.phase === 'long_tail';
+    const projectWideActive = pending?.phase === 'project_wide';
     const isComplete = interview?.is_complete ?? false;
 
     // Rooms-list is sorted by position to match the PHP walker, so a room at
     // index i is "done" when the walker has moved past it: either the whole
-    // interview is complete, the walker is now in long-tail, or the walker's
-    // current room sits at a later position.
+    // interview is complete, the walker is now in the project-wide phase, or
+    // the walker's current room sits at a later position.
     const doneThroughRoomIndex = (() => {
-        if (isComplete || longTailActive) {
+        if (isComplete || projectWideActive) {
             return Infinity;
         }
 
@@ -83,10 +83,10 @@ export default function RoomsList({
 
             {interview !== null && (
                 <ProjectWideCard
-                    catalog={interview.catalog.long_tail}
-                    answers={answers.long_tail}
-                    pendingQuestionKey={longTailActive ? pending!.key : null}
-                    isActive={longTailActive}
+                    catalog={interview.catalog.project_wide}
+                    answers={answers.project_wide}
+                    pendingQuestionKey={projectWideActive ? pending!.key : null}
+                    isActive={projectWideActive}
                     isDone={isComplete}
                     action={action}
                 />
