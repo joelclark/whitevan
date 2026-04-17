@@ -15,12 +15,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
-    'customer_id',
+    'project_id',
     'trade',
     'title',
     'pdf_path',
@@ -85,9 +86,30 @@ class Estimate extends Model
         });
     }
 
-    public function customer(): BelongsTo
+    /**
+     * @return BelongsTo<Project, $this>
+     */
+    public function project(): BelongsTo
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Customer via the Project parent. Preserves `$estimate->customer`
+     * reads and eager-loading now that the FK lives on Project.
+     *
+     * @return HasOneThrough<Customer, Project, $this>
+     */
+    public function customer(): HasOneThrough
+    {
+        return $this->hasOneThrough(
+            Customer::class,
+            Project::class,
+            'id',
+            'id',
+            'project_id',
+            'customer_id',
+        );
     }
 
     /**
@@ -127,6 +149,11 @@ class Estimate extends Model
     public function isQuoteSent(): bool
     {
         return $this->quote_status === QuoteStatus::Sent;
+    }
+
+    public function recordProjectActivity(): void
+    {
+        $this->project->recordActivity();
     }
 
     public function latestContentChange(): CarbonInterface

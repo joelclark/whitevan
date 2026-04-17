@@ -14,10 +14,10 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import type { Customer } from '@/types';
+import type { Project } from '@/types';
 
 type Props = {
-    customer: Customer;
+    project: Project;
     trigger: ReactNode;
 };
 
@@ -33,7 +33,7 @@ function formatBytes(bytes: number): string {
     return `${bytes} B`;
 }
 
-export default function UploadEstimateDialog({ customer, trigger }: Props) {
+export default function UploadEstimateDialog({ project, trigger }: Props) {
     const [open, setOpen] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -68,7 +68,7 @@ export default function UploadEstimateDialog({ customer, trigger }: Props) {
                 </DialogDescription>
 
                 <Form
-                    {...EstimateController.store.form(customer.id)}
+                    {...EstimateController.store.form(project.id)}
                     onSuccess={() => {
                         setOpen(false);
                         reset();

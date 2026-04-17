@@ -38,6 +38,8 @@ class QuoteController extends Controller
             'quote_sent_at' => now(),
         ]);
 
+        $estimate->recordProjectActivity();
+
         ActivityLogger::event(
             ActivityEvent::EstimateQuoteSent,
             metadata: ['estimate_id' => $estimate->id],
@@ -64,6 +66,7 @@ class QuoteController extends Controller
         // "View Quote" should not reset the change-detection marker.
         if (auth()->guest()) {
             $estimate->update(['quote_customer_viewed_at' => now()]);
+            $estimate->recordProjectActivity();
 
             ActivityLogger::event(
                 ActivityEvent::EstimateQuoteViewed,

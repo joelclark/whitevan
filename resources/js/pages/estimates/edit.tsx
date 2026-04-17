@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import EstimateController from '@/actions/App/Http/Controllers/EstimateController';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { index as estimatesIndex } from '@/routes/estimates';
+import { index as projectsIndex } from '@/routes/projects';
+import { edit as projectsEdit } from '@/routes/projects';
 import type {
     Auth,
     Estimate,
@@ -67,9 +68,9 @@ export default function EstimatesEdit({
             <div>
                 <div className="mb-4">
                     <Button variant="ghost" size="sm" asChild>
-                        <Link href={estimatesIndex()}>
+                        <Link href={projectsEdit(estimate.project_id)}>
                             <ArrowLeft className="mr-1 h-4 w-4" />
-                            Back to estimates
+                            Back to project
                         </Link>
                     </Button>
                 </div>
@@ -217,5 +218,5 @@ export default function EstimatesEdit({
 }
 
 EstimatesEdit.layout = {
-    breadcrumbs: [{ title: 'Estimates', href: estimatesIndex() }],
+    breadcrumbs: [{ title: 'Projects', href: projectsIndex() }],
 };

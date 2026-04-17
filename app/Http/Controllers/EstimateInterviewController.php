@@ -41,6 +41,7 @@ class EstimateInterviewController extends Controller
         );
 
         $estimate->save();
+        $estimate->recordProjectActivity();
 
         $isNowComplete = $interview->isComplete($estimate);
 
@@ -54,7 +55,7 @@ class EstimateInterviewController extends Controller
                 ActivityEvent::EstimateInterviewCompleted,
                 metadata: [
                     'estimate_id' => $estimate->id,
-                    'customer_id' => $estimate->customer_id,
+                    'project_id' => $estimate->project_id,
                     'line_items_count' => count($drafts),
                 ],
                 account: $account,

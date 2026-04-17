@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Estimate;
 use App\Models\EstimateLineItem;
 use App\Models\EstimateRoom;
+use App\Models\Project;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('guests are redirected to login', function () {
@@ -158,6 +159,29 @@ test('edit page has interview null when status is processing', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('estimates/edit')
             ->where('interview', null)
+        );
+});
+
+test('edit payload includes customer and project for the record header', function () {
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create([
+        'account_id' => $account->id,
+        'first_name' => 'Ada',
+        'last_name' => 'Lovelace',
+    ]);
+    $project = Project::factory()->forCustomer($customer)->create([
+        'name' => 'Kitchen remodel',
+    ]);
+    $estimate = Estimate::factory()->forProject($project)->create();
+
+    $this->actingAs($account->owner)
+        ->get(route('estimates.edit', $estimate))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('estimates/edit')
+            ->where('estimate.customer.id', $customer->id)
+            ->where('estimate.customer.first_name', 'Ada')
+            ->where('estimate.project.id', $project->id)
+            ->where('estimate.project.name', 'Kitchen remodel')
         );
 });
 

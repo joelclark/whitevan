@@ -73,6 +73,34 @@ test('successful extraction fills the estimate and its rooms', function () {
     );
 });
 
+test('successful extraction bumps the project last_activity_at', function () {
+    Ai::fakeAgent(FloorPlanExtractionAgent::class, [
+        [
+            'title' => 'Smith main floor',
+            'total_sqft' => 1250,
+            'rooms' => [
+                ['name' => 'Kitchen', 'page' => 1, 'sqft' => 200, 'perimeter' => 60],
+            ],
+            'errors' => [],
+        ],
+    ]);
+
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    Storage::disk('local')->put('estimate-pdfs/abc.pdf', 'pdfcontents');
+    $estimate = Estimate::factory()->forCustomer($customer)->processing()->create([
+        'pdf_path' => 'estimate-pdfs/abc.pdf',
+    ]);
+
+    $project = $estimate->project;
+    $project->forceFill(['last_activity_at' => now()->subDays(3)])->save();
+    $before = $project->fresh()->last_activity_at;
+
+    (new ProcessEstimatePdfJob($estimate->id))->handle();
+
+    expect($project->fresh()->last_activity_at->greaterThan($before))->toBeTrue();
+});
+
 test('successful extraction writes the expected debug_log structure', function () {
     Ai::fakeAgent(FloorPlanExtractionAgent::class, [
         [

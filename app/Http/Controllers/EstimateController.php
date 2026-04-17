@@ -13,10 +13,9 @@ use App\Interviews\InterviewDispatcher;
 use App\Interviews\LineItemEmitterDispatcher;
 use App\Interviews\LineItemReconciler;
 use App\Jobs\ProcessEstimatePdfJob;
-use App\Models\Customer;
 use App\Models\Estimate;
+use App\Models\Project;
 use App\Services\ActivityLogger;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -27,48 +26,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EstimateController extends Controller
 {
-    public function index(Request $request, AccountContext $accountContext): Response
-    {
-        $account = $accountContext->get();
-        abort_if($account === null, 403);
-
-        $search = trim((string) $request->query('search', ''));
-
-        $estimates = Estimate::query()
-            ->with(['customer:id,first_name,last_name,company'])
-            ->when($search !== '', function (Builder $query) use ($search): void {
-                $like = '%'.$search.'%';
-                $query->where(function (Builder $q) use ($like): void {
-                    $q->whereLike('title', $like, caseSensitive: false)
-                        ->orWhereHas('customer', function (Builder $cq) use ($like): void {
-                            // Group the OR chain so the whereHas's auto-injected
-                            // foreign-key constraint remains an AND. Otherwise
-                            // the first column's orWhere bubbles up and every
-                            // row matches on the FK side of the boolean.
-                            $cq->where(function (Builder $inner) use ($like): void {
-                                $inner->whereLike('first_name', $like, caseSensitive: false)
-                                    ->orWhereLike('last_name', $like, caseSensitive: false)
-                                    ->orWhereLike('company', $like, caseSensitive: false);
-                            });
-                        });
-                });
-            })
-            ->orderByDesc('updated_at')
-            ->orderByDesc('id')
-            ->paginate(25)
-            ->withQueryString();
-
-        return Inertia::render('estimates/index', [
-            'estimates' => $estimates,
-            'filters' => [
-                'search' => $search,
-            ],
-        ]);
-    }
-
     public function store(
         EstimateStoreRequest $request,
-        Customer $customer,
+        Project $project,
         AccountContext $accountContext,
     ): RedirectResponse {
         $account = $accountContext->get();
@@ -82,7 +42,7 @@ class EstimateController extends Controller
         );
 
         $estimate = Estimate::create([
-            'customer_id' => $customer->id,
+            'project_id' => $project->id,
             // Flooring is the only trade today. When trade selection lands in
             // the upload form, read it from $request instead of hard-coding.
             'trade' => Trade::Flooring,
@@ -95,11 +55,14 @@ class EstimateController extends Controller
 
         ProcessEstimatePdfJob::dispatch($estimate->id);
 
+        $project->recordActivity();
+
         ActivityLogger::event(
             ActivityEvent::EstimateCreated,
             metadata: [
                 'estimate_id' => $estimate->id,
-                'customer_id' => $customer->id,
+                'project_id' => $project->id,
+                'customer_id' => $project->customer_id,
                 'pdf_original_filename' => $estimate->pdf_original_filename,
             ],
             account: $account,
@@ -111,7 +74,7 @@ class EstimateController extends Controller
 
     public function edit(Estimate $estimate): Response
     {
-        $estimate->load(['customer', 'rooms', 'floorplanPages', 'activeLineItems']);
+        $estimate->load(['customer', 'project', 'rooms', 'floorplanPages', 'activeLineItems']);
 
         // Normalize interview_answers for Inertia: AsArrayObject flattens
         // empty inner maps to [], but the frontend type expects objects.
@@ -196,12 +159,13 @@ class EstimateController extends Controller
 
         if ($estimate->isDirty()) {
             $estimate->save();
+            $estimate->recordProjectActivity();
 
             ActivityLogger::event(
                 ActivityEvent::EstimateUpdated,
                 metadata: [
                     'estimate_id' => $estimate->id,
-                    'customer_id' => $estimate->customer_id,
+                    'project_id' => $estimate->project_id,
                 ],
                 account: $account,
                 user: $request->user(),
@@ -257,6 +221,8 @@ class EstimateController extends Controller
 
         ProcessEstimatePdfJob::dispatch($estimate->id);
 
+        $estimate->recordProjectActivity();
+
         return back();
     }
 
@@ -269,22 +235,23 @@ class EstimateController extends Controller
         abort_if($account === null, 403);
 
         $estimateId = $estimate->id;
-        $customerId = $estimate->customer_id;
+        $projectId = $estimate->project_id;
 
         $estimate->delete();
+        $estimate->recordProjectActivity();
 
         ActivityLogger::event(
             ActivityEvent::EstimateDeleted,
             metadata: [
                 'estimate_id' => $estimateId,
-                'customer_id' => $customerId,
+                'project_id' => $projectId,
             ],
             account: $account,
             user: $request->user(),
         );
 
         return redirect()
-            ->route('estimates.index')
+            ->route('projects.edit', $projectId)
             ->with('status', 'estimate-deleted');
     }
 
@@ -302,6 +269,8 @@ class EstimateController extends Controller
         $item->update([
             'unit_price' => $validated['unit_price'],
         ]);
+
+        $estimate->recordProjectActivity();
 
         return back();
     }

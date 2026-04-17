@@ -3,6 +3,9 @@
 use App\Models\Account;
 use App\Models\ActivityLog;
 use App\Models\Customer;
+use App\Models\Estimate;
+use App\Models\Project;
+use Carbon\CarbonImmutable;
 
 test('getting the edit page bumps last_accessed_at without touching updated_at', function () {
     $account = Account::factory()->create();
@@ -77,4 +80,52 @@ test('guests are redirected to login when viewing a customer', function () {
 
     $this->get(route('customers.edit', $customer))
         ->assertRedirect(route('login'));
+});
+
+test('edit payload exposes project + estimate counts for the projects panel', function () {
+    $account = Account::factory()->create();
+    $user = $account->owner;
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+
+    $older = Project::factory()->forCustomer($customer)->create([
+        'name' => 'Older project',
+        'updated_at' => CarbonImmutable::now()->subDays(7),
+    ]);
+    Estimate::factory()->forProject($older)->count(2)->create();
+
+    $newer = Project::factory()->forCustomer($customer)->create([
+        'name' => 'Newer project',
+        'updated_at' => CarbonImmutable::now()->subMinutes(5),
+    ]);
+    Estimate::factory()->forProject($newer)->count(3)->create();
+
+    $this->actingAs($user)
+        ->get(route('customers.edit', $customer))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('customers/edit')
+            ->where('customer.projects_count', 2)
+            ->where('customer.estimates_count', 5)
+            ->has('customer.projects', 2)
+            // Ordered by updated_at desc — the newer project comes first.
+            ->where('customer.projects.0.id', $newer->id)
+            ->where('customer.projects.0.name', 'Newer project')
+            ->where('customer.projects.0.estimates_count', 3)
+            ->where('customer.projects.1.id', $older->id)
+            ->where('customer.projects.1.estimates_count', 2)
+        );
+});
+
+test('edit payload returns empty projects collection when none exist', function () {
+    $account = Account::factory()->create();
+    $user = $account->owner;
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+
+    $this->actingAs($user)
+        ->get(route('customers.edit', $customer))
+        ->assertInertia(fn ($page) => $page
+            ->where('customer.projects_count', 0)
+            ->where('customer.estimates_count', 0)
+            ->has('customer.projects', 0)
+        );
 });

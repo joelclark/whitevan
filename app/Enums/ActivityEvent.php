@@ -17,6 +17,9 @@ enum ActivityEvent: string
     case CustomerCreated = 'customer.created';
     case CustomerUpdated = 'customer.updated';
     case CustomerDeleted = 'customer.deleted';
+    case ProjectCreated = 'project.created';
+    case ProjectUpdated = 'project.updated';
+    case ProjectDeleted = 'project.deleted';
     case EstimateCreated = 'estimate.created';
     case EstimateUpdated = 'estimate.updated';
     case EstimateDeleted = 'estimate.deleted';
@@ -43,6 +46,9 @@ enum ActivityEvent: string
             self::CustomerCreated => 'Customer created',
             self::CustomerUpdated => 'Customer updated',
             self::CustomerDeleted => 'Customer deleted',
+            self::ProjectCreated => 'Project created',
+            self::ProjectUpdated => 'Project updated',
+            self::ProjectDeleted => 'Project deleted',
             self::EstimateCreated => 'Estimate created',
             self::EstimateUpdated => 'Estimate updated',
             self::EstimateDeleted => 'Estimate deleted',
