@@ -10,7 +10,6 @@ use App\Models\Account;
 use App\Models\ActivityLog;
 use App\Models\AiAgentSetting;
 use App\Models\Customer;
-use App\Models\Project;
 use App\Models\SecurityGroupUser;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -385,14 +384,6 @@ class DevSeeder extends Seeder
 
             if ($archived && $customer->deleted_at === null) {
                 $customer->delete();
-            } elseif (! $archived) {
-                Project::firstOrCreate(
-                    [
-                        'account_id' => $account->id,
-                        'customer_id' => $customer->id,
-                        'name' => 'Main job',
-                    ],
-                );
             }
         }
     }
