@@ -86,7 +86,10 @@ class CustomerController extends Controller
         });
 
         $customer->last_accessed_at = now();
-        $customer->loadCount('estimates');
+        $customer->loadCount(['projects', 'estimates']);
+        $customer->load([
+            'projects' => fn ($q) => $q->withCount('estimates')->orderByDesc('updated_at')->orderByDesc('id'),
+        ]);
 
         return Inertia::render('customers/edit', [
             'customer' => $customer,
@@ -127,16 +130,16 @@ class CustomerController extends Controller
         $customerId = $customer->id;
         $customerName = trim($customer->first_name.' '.$customer->last_name);
 
-        // The estimates FK is restrictOnDelete — let the database enforce the
-        // rule and surface a friendly message instead of a 500.
-        if ($customer->estimates()->exists()) {
-            return back()->with('status', 'customer-has-estimates');
+        // The projects FK is restrictOnDelete (and estimates are transitively
+        // blocked via projects). Surface a friendly message instead of a 500.
+        if ($customer->projects()->exists()) {
+            return back()->with('status', 'customer-has-projects');
         }
 
         try {
             $customer->delete();
         } catch (QueryException $e) {
-            return back()->with('status', 'customer-has-estimates');
+            return back()->with('status', 'customer-has-projects');
         }
 
         ActivityLogger::event(

@@ -100,7 +100,7 @@ export default function EstimatesIndex({ estimates, filters }: Props) {
                     <div className="relative w-full max-w-sm">
                         <Search className="pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                            placeholder="Search by title or customer…"
+                            placeholder="Search by title, project, or customer…"
                             defaultValue={filters.search}
                             onChange={(e) => handleSearch(e.target.value)}
                             className="h-12 pl-10 text-base"
@@ -113,6 +113,9 @@ export default function EstimatesIndex({ estimates, filters }: Props) {
                         <thead>
                             <tr className="border-b text-left">
                                 <th className="px-4 py-3 font-medium">Title</th>
+                                <th className="px-4 py-3 font-medium">
+                                    Project
+                                </th>
                                 <th className="px-4 py-3 font-medium">
                                     Customer
                                 </th>
@@ -132,18 +135,20 @@ export default function EstimatesIndex({ estimates, filters }: Props) {
                             {!hasEstimates && (
                                 <tr>
                                     <td
-                                        colSpan={6}
+                                        colSpan={7}
                                         className="px-4 py-16 text-center text-muted-foreground"
                                     >
                                         {hasSearch
                                             ? `No estimates match "${filters.search}".`
-                                            : 'No estimates yet. Open a customer and upload a floor plan PDF to get started.'}
+                                            : 'No estimates yet. Open a customer, create a project, and upload a floor plan PDF to get started.'}
                                     </td>
                                 </tr>
                             )}
                             {estimates.data.map((estimate) => {
+                                const project = estimate.project;
+                                const customer = project.customer;
                                 const customerName =
-                                    `${estimate.customer.first_name} ${estimate.customer.last_name}`.trim();
+                                    `${customer.first_name} ${customer.last_name}`.trim();
 
                                 return (
                                     <tr
@@ -170,8 +175,11 @@ export default function EstimatesIndex({ estimates, filters }: Props) {
                                             </Link>
                                         </td>
                                         <td className="px-4 py-4 text-muted-foreground">
+                                            {project.name}
+                                        </td>
+                                        <td className="px-4 py-4 text-muted-foreground">
                                             {customerName ||
-                                                estimate.customer.company ||
+                                                customer.company ||
                                                 '—'}
                                         </td>
                                         <td className="px-4 py-4 text-muted-foreground">

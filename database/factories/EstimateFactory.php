@@ -7,6 +7,7 @@ use App\Enums\QuoteStatus;
 use App\Enums\Trade;
 use App\Models\Customer;
 use App\Models\Estimate;
+use App\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -38,14 +39,26 @@ class EstimateFactory extends Factory
     }
 
     /**
-     * Attach the estimate to a specific customer (and therefore account).
+     * Attach the estimate to a specific project (and therefore account).
+     */
+    public function forProject(Project $project): static
+    {
+        return $this->state(fn () => [
+            'project_id' => $project->id,
+            'account_id' => $project->account_id,
+        ]);
+    }
+
+    /**
+     * Compatibility shim: auto-creates a Project on the customer and
+     * attaches the estimate to it. Lets existing callers migrate in
+     * lockstep without rewriting every test; safe to inline later.
      */
     public function forCustomer(Customer $customer): static
     {
-        return $this->state(fn () => [
-            'customer_id' => $customer->id,
-            'account_id' => $customer->account_id,
-        ]);
+        $project = Project::factory()->forCustomer($customer)->create();
+
+        return $this->forProject($project);
     }
 
     public function processing(): static

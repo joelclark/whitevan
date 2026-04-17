@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -52,10 +53,18 @@ class Customer extends Model
     }
 
     /**
-     * @return HasMany<Estimate, $this>
+     * @return HasMany<Project, $this>
      */
-    public function estimates(): HasMany
+    public function projects(): HasMany
     {
-        return $this->hasMany(Estimate::class);
+        return $this->hasMany(Project::class);
+    }
+
+    /**
+     * @return HasManyThrough<Estimate, Project, $this>
+     */
+    public function estimates(): HasManyThrough
+    {
+        return $this->hasManyThrough(Estimate::class, Project::class);
     }
 }

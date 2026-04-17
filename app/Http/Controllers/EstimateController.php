@@ -13,8 +13,8 @@ use App\Interviews\InterviewDispatcher;
 use App\Interviews\LineItemEmitterDispatcher;
 use App\Interviews\LineItemReconciler;
 use App\Jobs\ProcessEstimatePdfJob;
-use App\Models\Customer;
 use App\Models\Estimate;
+use App\Models\Project;
 use App\Services\ActivityLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -35,16 +35,23 @@ class EstimateController extends Controller
         $search = trim((string) $request->query('search', ''));
 
         $estimates = Estimate::query()
-            ->with(['customer:id,first_name,last_name,company'])
+            ->with([
+                'project:id,name,customer_id',
+                'project.customer:id,first_name,last_name,company',
+            ])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $like = '%'.$search.'%';
                 $query->where(function (Builder $q) use ($like): void {
                     $q->whereLike('title', $like, caseSensitive: false)
-                        ->orWhereHas('customer', function (Builder $cq) use ($like): void {
+                        ->orWhereHas('project', function (Builder $pq) use ($like): void {
                             // Group the OR chain so the whereHas's auto-injected
-                            // foreign-key constraint remains an AND. Otherwise
-                            // the first column's orWhere bubbles up and every
-                            // row matches on the FK side of the boolean.
+                            // foreign-key constraint remains an AND. Same trick
+                            // as the customer branch below.
+                            $pq->where(function (Builder $inner) use ($like): void {
+                                $inner->whereLike('name', $like, caseSensitive: false);
+                            });
+                        })
+                        ->orWhereHas('project.customer', function (Builder $cq) use ($like): void {
                             $cq->where(function (Builder $inner) use ($like): void {
                                 $inner->whereLike('first_name', $like, caseSensitive: false)
                                     ->orWhereLike('last_name', $like, caseSensitive: false)
@@ -68,7 +75,7 @@ class EstimateController extends Controller
 
     public function store(
         EstimateStoreRequest $request,
-        Customer $customer,
+        Project $project,
         AccountContext $accountContext,
     ): RedirectResponse {
         $account = $accountContext->get();
@@ -82,7 +89,7 @@ class EstimateController extends Controller
         );
 
         $estimate = Estimate::create([
-            'customer_id' => $customer->id,
+            'project_id' => $project->id,
             // Flooring is the only trade today. When trade selection lands in
             // the upload form, read it from $request instead of hard-coding.
             'trade' => Trade::Flooring,
@@ -99,7 +106,8 @@ class EstimateController extends Controller
             ActivityEvent::EstimateCreated,
             metadata: [
                 'estimate_id' => $estimate->id,
-                'customer_id' => $customer->id,
+                'project_id' => $project->id,
+                'customer_id' => $project->customer_id,
                 'pdf_original_filename' => $estimate->pdf_original_filename,
             ],
             account: $account,
@@ -111,7 +119,7 @@ class EstimateController extends Controller
 
     public function edit(Estimate $estimate): Response
     {
-        $estimate->load(['customer', 'rooms', 'floorplanPages', 'activeLineItems']);
+        $estimate->load(['customer', 'project', 'rooms', 'floorplanPages', 'activeLineItems']);
 
         // Normalize interview_answers for Inertia: AsArrayObject flattens
         // empty inner maps to [], but the frontend type expects objects.
@@ -201,7 +209,7 @@ class EstimateController extends Controller
                 ActivityEvent::EstimateUpdated,
                 metadata: [
                     'estimate_id' => $estimate->id,
-                    'customer_id' => $estimate->customer_id,
+                    'project_id' => $estimate->project_id,
                 ],
                 account: $account,
                 user: $request->user(),
@@ -269,7 +277,7 @@ class EstimateController extends Controller
         abort_if($account === null, 403);
 
         $estimateId = $estimate->id;
-        $customerId = $estimate->customer_id;
+        $projectId = $estimate->project_id;
 
         $estimate->delete();
 
@@ -277,7 +285,7 @@ class EstimateController extends Controller
             ActivityEvent::EstimateDeleted,
             metadata: [
                 'estimate_id' => $estimateId,
-                'customer_id' => $customerId,
+                'project_id' => $projectId,
             ],
             account: $account,
             user: $request->user(),

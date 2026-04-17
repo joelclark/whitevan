@@ -6,8 +6,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('estimates', [EstimateController::class, 'index'])->name('estimates.index');
-    Route::post('customers/{customer}/estimates', [EstimateController::class, 'store'])
-        ->name('customers.estimates.store');
+    Route::post('projects/{project}/estimates', [EstimateController::class, 'store'])
+        ->name('projects.estimates.store');
     Route::get('estimates/{estimate}', [EstimateController::class, 'edit'])->name('estimates.edit');
     Route::patch('estimates/{estimate}', [EstimateController::class, 'update'])->name('estimates.update');
     Route::delete('estimates/{estimate}', [EstimateController::class, 'destroy'])->name('estimates.destroy');

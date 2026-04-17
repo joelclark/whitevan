@@ -1,4 +1,5 @@
 import type { Customer } from './customer';
+import type { Project } from './project';
 
 export type EstimateStatus = 'processing' | 'ready' | 'failed';
 
@@ -76,7 +77,7 @@ export type EstimateRoom = {
 export type Estimate = {
     id: number;
     account_id: number;
-    customer_id: number;
+    project_id: number;
     trade: Trade;
     title: string | null;
     pdf_path: string;
@@ -96,11 +97,14 @@ export type Estimate = {
     updated_at: string;
     deleted_at: string | null;
     customer?: Customer;
+    project?: Project;
     rooms?: EstimateRoom[];
 };
 
 export type EstimateListItem = Estimate & {
-    customer: Pick<Customer, 'id' | 'first_name' | 'last_name' | 'company'>;
+    project: Pick<Project, 'id' | 'name' | 'customer_id'> & {
+        customer: Pick<Customer, 'id' | 'first_name' | 'last_name' | 'company'>;
+    };
 };
 
 export type PaginatedEstimates = {

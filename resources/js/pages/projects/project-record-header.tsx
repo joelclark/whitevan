@@ -1,4 +1,5 @@
-import { FolderPlus, Mail, MoreHorizontal, Phone } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import { FilePlus2, MapPin, MoreHorizontal, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -6,63 +7,84 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import NewProjectDialog from '@/pages/projects/new-project-dialog';
-import type { Customer } from '@/types';
-import DeleteCustomerDialog from './delete-customer-dialog';
+import UploadEstimateDialog from '@/pages/estimates/upload-estimate-dialog';
+import { edit as customersEdit } from '@/routes/customers';
+import type { Project } from '@/types';
+import DeleteProjectDialog from './delete-project-dialog';
 
 type Props = {
-    customer: Customer;
+    project: Project;
 };
 
-export default function CustomerRecordHeader({ customer }: Props) {
-    const fullName = `${customer.first_name} ${customer.last_name}`.trim();
+function formatSiteAddress(project: Project): string | null {
+    const parts: string[] = [];
+
+    if (project.site_address_line_1) {
+        parts.push(project.site_address_line_1);
+    }
+
+    if (project.site_address_line_2) {
+        parts.push(project.site_address_line_2);
+    }
+
+    const cityStateZip = [
+        project.site_city,
+        project.site_state,
+        project.site_zip,
+    ]
+        .filter((p): p is string => p !== null && p !== '')
+        .join(' ');
+
+    if (cityStateZip) {
+        parts.push(cityStateZip);
+    }
+
+    return parts.length > 0 ? parts.join(', ') : null;
+}
+
+export default function ProjectRecordHeader({ project }: Props) {
+    const customer = project.customer;
+    const customerName = customer
+        ? `${customer.first_name} ${customer.last_name}`.trim()
+        : null;
+    const siteAddress = formatSiteAddress(project);
 
     return (
         <div className="flex flex-col gap-4 border-b pb-6 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
                 <h1 className="text-3xl font-semibold tracking-tight">
-                    {fullName}
+                    {project.name}
                 </h1>
-                {customer.company && (
-                    <p className="text-muted-foreground">{customer.company}</p>
-                )}
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                    {customer.phone && (
-                        <span className="inline-flex items-center gap-1.5">
-                            <Phone className="h-4 w-4" />
-                            <a
-                                href={`tel:${customer.phone}`}
-                                className="hover:text-foreground"
-                            >
-                                {customer.phone}
-                            </a>
-                        </span>
+                    {customer && (
+                        <Link
+                            href={customersEdit(customer.id)}
+                            className="inline-flex items-center gap-1.5 hover:text-foreground"
+                        >
+                            <User className="h-4 w-4" />
+                            {customerName || customer.company || 'Customer'}
+                        </Link>
                     )}
-                    {customer.email && (
+                    {siteAddress && (
                         <span className="inline-flex items-center gap-1.5">
-                            <Mail className="h-4 w-4" />
-                            <a
-                                href={`mailto:${customer.email}`}
-                                className="hover:text-foreground"
-                            >
-                                {customer.email}
-                            </a>
+                            <MapPin className="h-4 w-4" />
+                            {siteAddress}
                         </span>
                     )}
                 </div>
             </div>
 
             <div className="flex flex-shrink-0 items-center gap-2">
-                <NewProjectDialog
-                    customer={customer}
+                <UploadEstimateDialog
+                    project={project}
                     trigger={
                         <Button
                             variant="default"
                             type="button"
                             className="h-12 px-5 text-base"
                         >
-                            <FolderPlus className="mr-2 h-4 w-4" />
-                            New Project
+                            <FilePlus2 className="mr-2 h-4 w-4" />
+                            New Estimate
                         </Button>
                     }
                 />
@@ -79,14 +101,14 @@ export default function CustomerRecordHeader({ customer }: Props) {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DeleteCustomerDialog
-                            customer={customer}
+                        <DeleteProjectDialog
+                            project={project}
                             trigger={
                                 <DropdownMenuItem
                                     onSelect={(e) => e.preventDefault()}
                                     className="text-destructive focus:text-destructive"
                                 >
-                                    Delete customer
+                                    Delete project
                                 </DropdownMenuItem>
                             }
                         />

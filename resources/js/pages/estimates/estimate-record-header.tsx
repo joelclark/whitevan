@@ -2,6 +2,7 @@ import { Form, Link } from '@inertiajs/react';
 import {
     ExternalLink,
     FileText,
+    FolderOpen,
     MoreHorizontal,
     RefreshCw,
     Send,
@@ -22,6 +23,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { edit as customersEdit } from '@/routes/customers';
 import { pdf as estimatesPdf } from '@/routes/estimates';
+import { edit as projectsEdit } from '@/routes/projects';
 import { show as quotesShow } from '@/routes/quotes';
 import type { Estimate, EstimateStatus } from '@/types';
 import DeleteEstimateDialog from './delete-estimate-dialog';
@@ -54,6 +56,7 @@ export default function EstimateRecordHeader({
     const [isEditingTitle, setIsEditingTitle] = useState(false);
 
     const customer = estimate.customer;
+    const project = estimate.project;
     const customerName = customer
         ? `${customer.first_name} ${customer.last_name}`.trim()
         : 'Unknown customer';
@@ -118,6 +121,15 @@ export default function EstimateRecordHeader({
                         >
                             <User className="h-4 w-4" />
                             {customerName}
+                        </Link>
+                    )}
+                    {project && (
+                        <Link
+                            href={projectsEdit(project.id)}
+                            className="inline-flex items-center gap-1.5 hover:text-foreground"
+                        >
+                            <FolderOpen className="h-4 w-4" />
+                            {project.name}
                         </Link>
                     )}
                     {estimate.total_sqft !== null && (

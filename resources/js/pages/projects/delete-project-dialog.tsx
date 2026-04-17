@@ -1,7 +1,7 @@
 import { Form } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import CustomerController from '@/actions/App/Http/Controllers/CustomerController';
+import ProjectController from '@/actions/App/Http/Controllers/ProjectController';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -12,33 +12,32 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import type { Customer } from '@/types';
+import type { Project } from '@/types';
 
 type Props = {
-    customer: Customer;
+    project: Project;
     trigger: ReactNode;
 };
 
-export default function DeleteCustomerDialog({ customer, trigger }: Props) {
+export default function DeleteProjectDialog({ project, trigger }: Props) {
     const [open, setOpen] = useState(false);
-    const fullName = `${customer.first_name} ${customer.last_name}`.trim();
-    const hasProjects = (customer.projects_count ?? 0) > 0;
+    const estimateCount = project.estimates?.length ?? 0;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{trigger}</DialogTrigger>
             <DialogContent>
-                <DialogTitle>Delete {fullName}?</DialogTitle>
+                <DialogTitle>Delete {project.name}?</DialogTitle>
                 <DialogDescription>
-                    {hasProjects
-                        ? `This customer has ${customer.projects_count} project${
-                              customer.projects_count === 1 ? '' : 's'
-                          }. Delete the projects first before removing the customer.`
-                        : 'This customer will be moved to the archive. Their data is retained and can be restored by an administrator.'}
+                    {estimateCount > 0
+                        ? `This project has ${estimateCount} estimate${
+                              estimateCount === 1 ? '' : 's'
+                          }. Deleting the project will archive all of them.`
+                        : 'This project will be moved to the archive.'}
                 </DialogDescription>
 
                 <Form
-                    {...CustomerController.destroy.form(customer.id)}
+                    {...ProjectController.destroy.form(project.id)}
                     options={{ preserveScroll: false }}
                     onSuccess={() => setOpen(false)}
                 >
@@ -52,9 +51,9 @@ export default function DeleteCustomerDialog({ customer, trigger }: Props) {
                             <Button
                                 variant="destructive"
                                 type="submit"
-                                disabled={processing || hasProjects}
+                                disabled={processing}
                             >
-                                Delete customer
+                                Delete project
                             </Button>
                         </DialogFooter>
                     )}

@@ -1,3 +1,5 @@
+import type { Project } from './project';
+
 export type Customer = {
     id: number;
     account_id: number;
@@ -17,6 +19,8 @@ export type Customer = {
     updated_at: string;
     deleted_at: string | null;
     estimates_count?: number;
+    projects_count?: number;
+    projects?: Project[];
 };
 
 export type PaginatedCustomers = {
