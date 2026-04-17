@@ -151,6 +151,11 @@ class Estimate extends Model
         return $this->quote_status === QuoteStatus::Sent;
     }
 
+    public function recordProjectActivity(): void
+    {
+        $this->project->recordActivity();
+    }
+
     public function latestContentChange(): CarbonInterface
     {
         $lineItemMax = $this->activeLineItems()->max('updated_at');

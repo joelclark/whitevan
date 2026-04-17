@@ -41,6 +41,7 @@ class EstimateInterviewController extends Controller
         );
 
         $estimate->save();
+        $estimate->recordProjectActivity();
 
         $isNowComplete = $interview->isComplete($estimate);
 

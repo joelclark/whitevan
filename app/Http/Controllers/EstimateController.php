@@ -16,7 +16,6 @@ use App\Jobs\ProcessEstimatePdfJob;
 use App\Models\Estimate;
 use App\Models\Project;
 use App\Services\ActivityLogger;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -27,52 +26,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EstimateController extends Controller
 {
-    public function index(Request $request, AccountContext $accountContext): Response
-    {
-        $account = $accountContext->get();
-        abort_if($account === null, 403);
-
-        $search = trim((string) $request->query('search', ''));
-
-        $estimates = Estimate::query()
-            ->with([
-                'project:id,name,customer_id',
-                'project.customer:id,first_name,last_name,company',
-            ])
-            ->when($search !== '', function (Builder $query) use ($search): void {
-                $like = '%'.$search.'%';
-                $query->where(function (Builder $q) use ($like): void {
-                    $q->whereLike('title', $like, caseSensitive: false)
-                        ->orWhereHas('project', function (Builder $pq) use ($like): void {
-                            // Group the OR chain so the whereHas's auto-injected
-                            // foreign-key constraint remains an AND. Same trick
-                            // as the customer branch below.
-                            $pq->where(function (Builder $inner) use ($like): void {
-                                $inner->whereLike('name', $like, caseSensitive: false);
-                            });
-                        })
-                        ->orWhereHas('project.customer', function (Builder $cq) use ($like): void {
-                            $cq->where(function (Builder $inner) use ($like): void {
-                                $inner->whereLike('first_name', $like, caseSensitive: false)
-                                    ->orWhereLike('last_name', $like, caseSensitive: false)
-                                    ->orWhereLike('company', $like, caseSensitive: false);
-                            });
-                        });
-                });
-            })
-            ->orderByDesc('updated_at')
-            ->orderByDesc('id')
-            ->paginate(25)
-            ->withQueryString();
-
-        return Inertia::render('estimates/index', [
-            'estimates' => $estimates,
-            'filters' => [
-                'search' => $search,
-            ],
-        ]);
-    }
-
     public function store(
         EstimateStoreRequest $request,
         Project $project,
@@ -101,6 +54,8 @@ class EstimateController extends Controller
         ]);
 
         ProcessEstimatePdfJob::dispatch($estimate->id);
+
+        $project->recordActivity();
 
         ActivityLogger::event(
             ActivityEvent::EstimateCreated,
@@ -204,6 +159,7 @@ class EstimateController extends Controller
 
         if ($estimate->isDirty()) {
             $estimate->save();
+            $estimate->recordProjectActivity();
 
             ActivityLogger::event(
                 ActivityEvent::EstimateUpdated,
@@ -265,6 +221,8 @@ class EstimateController extends Controller
 
         ProcessEstimatePdfJob::dispatch($estimate->id);
 
+        $estimate->recordProjectActivity();
+
         return back();
     }
 
@@ -280,6 +238,7 @@ class EstimateController extends Controller
         $projectId = $estimate->project_id;
 
         $estimate->delete();
+        $estimate->recordProjectActivity();
 
         ActivityLogger::event(
             ActivityEvent::EstimateDeleted,
@@ -292,7 +251,7 @@ class EstimateController extends Controller
         );
 
         return redirect()
-            ->route('estimates.index')
+            ->route('projects.edit', $projectId)
             ->with('status', 'estimate-deleted');
     }
 
@@ -310,6 +269,8 @@ class EstimateController extends Controller
         $item->update([
             'unit_price' => $validated['unit_price'],
         ]);
+
+        $estimate->recordProjectActivity();
 
         return back();
     }

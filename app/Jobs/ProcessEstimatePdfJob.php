@@ -145,6 +145,8 @@ class ProcessEstimatePdfJob implements ShouldQueue
             }
         });
 
+        $estimate->recordProjectActivity();
+
         // Hand off to the renderer in a separate job so failures there don't
         // flip the main estimate to failed. afterCommit() avoids the database
         // queue race where a worker could pick up the row before this

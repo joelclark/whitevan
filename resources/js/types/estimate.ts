@@ -101,22 +101,6 @@ export type Estimate = {
     rooms?: EstimateRoom[];
 };
 
-export type EstimateListItem = Estimate & {
-    project: Pick<Project, 'id' | 'name' | 'customer_id'> & {
-        customer: Pick<Customer, 'id' | 'first_name' | 'last_name' | 'company'>;
-    };
-};
-
-export type PaginatedEstimates = {
-    data: EstimateListItem[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    prev_page_url: string | null;
-    next_page_url: string | null;
-};
-
 export type AiAgentSetting = {
     id: number;
     kind: string;

@@ -203,12 +203,17 @@ test('authenticated user view does not update quote_customer_viewed_at', functio
     $customer = Customer::factory()->create(['account_id' => $account->id]);
     $estimate = Estimate::factory()->forCustomer($customer)->quoteSent()->create();
 
+    $project = $estimate->project;
+    $project->forceFill(['last_activity_at' => now()->subDays(3)])->save();
+    $before = $project->fresh()->last_activity_at;
+
     $this->actingAs($account->owner)
         ->get(route('quotes.show', $estimate->quote_token))
         ->assertOk();
 
     expect($estimate->refresh()->quote_customer_viewed_at)->toBeNull();
     expect(ActivityLog::where('event', ActivityEvent::EstimateQuoteViewed)->count())->toBe(0);
+    expect($project->fresh()->last_activity_at->equalTo($before))->toBeTrue();
 });
 
 test('floorplan page endpoint serves png for valid token', function () {

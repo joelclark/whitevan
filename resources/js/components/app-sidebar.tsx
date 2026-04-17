@@ -3,7 +3,7 @@ import {
     Activity,
     Bot,
     Contact,
-    FileText,
+    FolderKanban,
     LayoutGrid,
     Settings,
     Shield,
@@ -23,7 +23,7 @@ import {
 import { dashboard } from '@/routes';
 import { index as adminUsersIndex } from '@/routes/admin/users';
 import { index as customersIndex } from '@/routes/customers';
-import { index as estimatesIndex } from '@/routes/estimates';
+import { index as projectsIndex } from '@/routes/projects';
 import { dashboard as sysopsDashboard } from '@/routes/sysops';
 import { index as sysopsAccountsIndex } from '@/routes/sysops/accounts';
 import { index as sysopsActivityLogsIndex } from '@/routes/sysops/activity-logs';
@@ -42,9 +42,9 @@ const mainNavItems: NavItem[] = [
         icon: Contact,
     },
     {
-        title: 'Estimates',
-        href: estimatesIndex(),
-        icon: FileText,
+        title: 'Projects',
+        href: projectsIndex(),
+        icon: FolderKanban,
     },
 ];
 

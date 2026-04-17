@@ -23,11 +23,18 @@ return new class extends Migration
 
             $table->text('notes')->nullable();
 
+            // Denormalized sort key for the /projects workspace list. Not
+            // `updated_at` because we don't want "Laravel touched this row" to
+            // be conflated with "something meaningful happened on this job".
+            // Bumped explicitly via Project::recordActivity() from controllers
+            // and jobs; see CLAUDE.md for the bump-site policy.
+            $table->timestamp('last_activity_at')->useCurrent();
+
             $table->timestamps();
             $table->softDeletes();
 
             $table->index(['account_id', 'customer_id']);
-            $table->index(['account_id', 'updated_at']);
+            $table->index(['account_id', 'last_activity_at']);
         });
     }
 

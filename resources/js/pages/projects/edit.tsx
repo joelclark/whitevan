@@ -2,11 +2,8 @@ import { Head, Link, router } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    edit as customersEdit,
-    index as customersIndex,
-} from '@/routes/customers';
 import { edit as estimatesEdit } from '@/routes/estimates';
+import { index as projectsIndex } from '@/routes/projects';
 import type { Estimate, EstimateStatus, Project } from '@/types';
 import ProjectForm from './project-form';
 import ProjectRecordHeader from './project-record-header';
@@ -45,7 +42,6 @@ function formatDate(value: string): string {
 }
 
 export default function ProjectsEdit({ project }: Props) {
-    const customer = project.customer;
     const estimates: Estimate[] = project.estimates ?? [];
 
     return (
@@ -55,11 +51,9 @@ export default function ProjectsEdit({ project }: Props) {
             <div>
                 <div className="mb-4">
                     <Button variant="ghost" size="sm" asChild>
-                        <Link
-                            href={customer ? customersEdit(customer.id) : '#'}
-                        >
+                        <Link href={projectsIndex()}>
                             <ArrowLeft className="mr-1 h-4 w-4" />
-                            Back to customer
+                            Back to projects
                         </Link>
                     </Button>
                 </div>
@@ -166,5 +160,5 @@ export default function ProjectsEdit({ project }: Props) {
 }
 
 ProjectsEdit.layout = {
-    breadcrumbs: [{ title: 'Customers', href: customersIndex() }],
+    breadcrumbs: [{ title: 'Projects', href: projectsIndex() }],
 };

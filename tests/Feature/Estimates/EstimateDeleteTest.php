@@ -29,7 +29,7 @@ test('deleting an estimate soft-deletes it and removes the PDF and floorplan ima
 
     $this->actingAs($user)
         ->delete(route('estimates.destroy', $estimate))
-        ->assertRedirect(route('estimates.index'));
+        ->assertRedirect(route('projects.edit', $estimate->project_id));
 
     expect(Estimate::withTrashed()->find($estimate->id)->deleted_at)->not->toBeNull();
     Storage::disk('local')->assertMissing('estimate-pdfs/abc.pdf');

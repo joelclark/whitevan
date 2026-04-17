@@ -10,50 +10,25 @@ import {
 import UploadEstimateDialog from '@/pages/estimates/upload-estimate-dialog';
 import { edit as customersEdit } from '@/routes/customers';
 import type { Project } from '@/types';
+import { buildProjectTitle, formatProjectAddress } from './address';
 import DeleteProjectDialog from './delete-project-dialog';
 
 type Props = {
     project: Project;
 };
 
-function formatSiteAddress(project: Project): string | null {
-    const parts: string[] = [];
-
-    if (project.site_address_line_1) {
-        parts.push(project.site_address_line_1);
-    }
-
-    if (project.site_address_line_2) {
-        parts.push(project.site_address_line_2);
-    }
-
-    const cityStateZip = [
-        project.site_city,
-        project.site_state,
-        project.site_zip,
-    ]
-        .filter((p): p is string => p !== null && p !== '')
-        .join(' ');
-
-    if (cityStateZip) {
-        parts.push(cityStateZip);
-    }
-
-    return parts.length > 0 ? parts.join(', ') : null;
-}
-
 export default function ProjectRecordHeader({ project }: Props) {
     const customer = project.customer;
     const customerName = customer
         ? `${customer.first_name} ${customer.last_name}`.trim()
         : null;
-    const siteAddress = formatSiteAddress(project);
+    const siteAddress = formatProjectAddress(project);
 
     return (
         <div className="flex flex-col gap-4 border-b pb-6 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
                 <h1 className="text-3xl font-semibold tracking-tight">
-                    {project.name}
+                    {buildProjectTitle(project)}
                 </h1>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                     {customer && (
