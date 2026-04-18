@@ -1,6 +1,6 @@
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { AlertCircle, ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import EstimateController from '@/actions/App/Http/Controllers/EstimateController';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,6 +37,27 @@ export default function EstimatesEdit({
         estimate.floorplan_assets_status === 'pending';
     const shouldPoll = isProcessing || isRenderingFloorplans;
     const canViewDebugLog = Boolean(auth.impersonating);
+    const lineItemsRef = useRef<HTMLElement>(null);
+    const hasAutoScrolled = useRef(
+        (interview?.is_complete ?? false) && line_items.length > 0,
+    );
+
+    useEffect(() => {
+        const isComplete = interview?.is_complete ?? false;
+
+        if (
+            !hasAutoScrolled.current &&
+            isComplete &&
+            line_items.length > 0 &&
+            lineItemsRef.current
+        ) {
+            lineItemsRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+            });
+            hasAutoScrolled.current = true;
+        }
+    }, [interview?.is_complete, line_items.length]);
 
     useEffect(() => {
         if (!shouldPoll) {
@@ -83,7 +104,7 @@ export default function EstimatesEdit({
                     }
                 />
 
-                <div className="mt-8 max-w-4xl space-y-8">
+                <div className="mt-8 max-w-4xl space-y-8 pb-[40vh]">
                     <section>
                         <h2 className="mb-4 text-lg font-semibold">Rooms</h2>
 
@@ -182,7 +203,7 @@ export default function EstimatesEdit({
                     </section>
 
                     {line_items.length > 0 && (
-                        <section>
+                        <section ref={lineItemsRef} className="scroll-mt-6">
                             <h2 className="mb-4 text-lg font-semibold">
                                 Line Items
                             </h2>
