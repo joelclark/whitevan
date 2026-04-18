@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Concerns\MaterializesEstimatePdf;
 use App\Enums\ActivityEvent;
 use App\Enums\FloorplanAssetsStatus;
 use App\Models\Estimate;
@@ -14,7 +15,9 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -28,7 +31,7 @@ use Throwable;
  */
 class ExtractEstimateFloorplanAssetsJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, MaterializesEstimatePdf, Queueable, SerializesModels;
 
     public int $tries = 1;
 
@@ -50,9 +53,9 @@ class ExtractEstimateFloorplanAssetsJob implements ShouldQueue
             return;
         }
 
-        $absolutePdfPath = Storage::disk('local')->path($estimate->pdf_path);
+        $disk = Storage::disk(config('estimates.disk'));
 
-        if (! is_file($absolutePdfPath)) {
+        if (! $disk->exists($estimate->pdf_path)) {
             $this->persistFailure($estimate, ['PDF file is missing from disk: '.$estimate->pdf_path]);
 
             return;
@@ -76,76 +79,109 @@ class ExtractEstimateFloorplanAssetsJob implements ShouldQueue
             return;
         }
 
+        // pdftoppm/pdfinfo need a real on-disk file. When the configured
+        // disk is remote, stream the PDF to a temp path; PNGs render into
+        // a sibling temp dir and then upload to the configured disk.
+        $pdfCleanup = fn () => null;
+        $tempDir = sys_get_temp_dir().'/estimate-'.$estimate->id.'-'.Str::ulid();
+
         try {
-            $totalPages = $renderer->pageCount($absolutePdfPath);
-        } catch (Throwable $e) {
-            $this->persistFailure($estimate, ['pageCount: '.$e->getMessage()]);
+            try {
+                [$absolutePdfPath, $pdfCleanup] = $this->materializePdf($estimate);
+            } catch (Throwable $e) {
+                $this->persistFailure($estimate, ['materialize: '.$e->getMessage()]);
 
-            return;
-        }
-
-        $rendered = [];
-        $skipped = [];
-        $failed = [];
-
-        foreach ($pages as $page) {
-            if ($page < 1 || $page > $totalPages) {
-                $skipped[] = ['page' => $page, 'reason' => "page out of range (PDF has {$totalPages} pages)"];
-
-                continue;
+                return;
             }
 
-            $relativeDir = "estimate-floorplan-pages/{$estimate->id}";
-            $relativePath = "{$relativeDir}/p{$page}.png";
-            $absoluteDir = Storage::disk('local')->path($relativeDir);
-            $absolutePathNoExt = Storage::disk('local')->path("{$relativeDir}/p{$page}");
+            File::ensureDirectoryExists($tempDir);
 
             try {
-                File::ensureDirectoryExists($absoluteDir);
-                $written = $renderer->render($absolutePdfPath, $page, $absolutePathNoExt);
-
-                [$width, $height] = $this->measure($written);
-
-                $rendered[] = [
-                    'page' => $page,
-                    'image_path' => $relativePath,
-                    'width' => $width,
-                    'height' => $height,
-                ];
+                $totalPages = $renderer->pageCount($absolutePdfPath);
             } catch (Throwable $e) {
-                // Best-effort cleanup of any partial file.
-                Storage::disk('local')->delete($relativePath);
-                $failed[] = ['page' => $page, 'error' => $e->getMessage()];
-            }
-        }
+                $this->persistFailure($estimate, ['pageCount: '.$e->getMessage()]);
 
-        if ($rendered === []) {
-            $this->persistFailure(
-                $estimate,
-                ['No pages were rendered.'],
-                skipped: $skipped,
-                failed: $failed,
-            );
-
-            return;
-        }
-
-        DB::transaction(function () use ($estimate, $rendered, $skipped, $failed): void {
-            foreach ($rendered as $row) {
-                $estimate->floorplanPages()->create($row);
+                return;
             }
 
-            $estimate->forceFill([
-                'floorplan_assets_status' => FloorplanAssetsStatus::Ready,
-                'debug_log' => $this->mergeDebugLog($estimate, [
-                    'status' => 'success',
-                    'at' => now()->toIso8601String(),
-                    'rendered' => array_map(fn ($r) => $r['page'], $rendered),
-                    'pages_skipped' => $skipped,
-                    'pages_failed' => $failed,
-                ]),
-            ])->save();
-        });
+            $rendered = [];
+            $skipped = [];
+            $failed = [];
+
+            foreach ($pages as $page) {
+                if ($page < 1 || $page > $totalPages) {
+                    $skipped[] = ['page' => $page, 'reason' => "page out of range (PDF has {$totalPages} pages)"];
+
+                    continue;
+                }
+
+                $relativePath = "estimate-floorplan-pages/{$estimate->id}/p{$page}.png";
+                $tempPathNoExt = "{$tempDir}/p{$page}";
+
+                try {
+                    $written = $renderer->render($absolutePdfPath, $page, $tempPathNoExt);
+
+                    [$width, $height] = $this->measure($written);
+
+                    $stream = fopen($written, 'rb');
+                    $putResult = $disk->put($relativePath, $stream);
+                    if (is_resource($stream)) {
+                        fclose($stream);
+                    }
+
+                    // Flysystem adapters with `throw => false` return false on
+                    // failure instead of throwing. Treat that as a page-level
+                    // failure so we don't record a broken image_path row.
+                    if ($putResult === false) {
+                        throw new \RuntimeException("disk->put returned false for {$relativePath}");
+                    }
+
+                    Log::info('estimate.floorplan.page_uploaded', ['estimate_id' => $estimate->id, 'page' => $page, 'path' => $relativePath]);
+
+                    $rendered[] = [
+                        'page' => $page,
+                        'image_path' => $relativePath,
+                        'width' => $width,
+                        'height' => $height,
+                    ];
+                } catch (Throwable $e) {
+                    // Best-effort cleanup of any partial upload.
+                    $disk->delete($relativePath);
+                    $failed[] = ['page' => $page, 'error' => $e->getMessage()];
+                }
+            }
+
+            if ($rendered === []) {
+                $this->persistFailure(
+                    $estimate,
+                    ['No pages were rendered.'],
+                    skipped: $skipped,
+                    failed: $failed,
+                );
+
+                return;
+            }
+
+            DB::transaction(function () use ($estimate, $rendered, $skipped, $failed): void {
+                foreach ($rendered as $row) {
+                    $estimate->floorplanPages()->create($row);
+                }
+
+                $estimate->forceFill([
+                    'floorplan_assets_status' => FloorplanAssetsStatus::Ready,
+                    'debug_log' => $this->mergeDebugLog($estimate, [
+                        'status' => 'success',
+                        'at' => now()->toIso8601String(),
+                        'rendered' => array_map(fn ($r) => $r['page'], $rendered),
+                        'pages_skipped' => $skipped,
+                        'pages_failed' => $failed,
+                    ]),
+                ])->save();
+            });
+        } finally {
+            $pdfCleanup();
+            File::deleteDirectory($tempDir);
+        }
     }
 
     public function failed(Throwable $exception): void
@@ -167,7 +203,7 @@ class ExtractEstimateFloorplanAssetsJob implements ShouldQueue
             return;
         }
 
-        Storage::disk('local')->delete($existing->pluck('image_path')->all());
+        Storage::disk(config('estimates.disk'))->delete($existing->pluck('image_path')->all());
         $estimate->floorplanPages()->delete();
     }
 

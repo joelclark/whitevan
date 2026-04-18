@@ -135,9 +135,9 @@ class QuoteController extends Controller
 
         $row = $estimate->floorplanPages()->where('page', $page)->firstOrFail();
 
-        abort_unless(Storage::disk('local')->exists($row->image_path), 404);
+        abort_unless(Storage::disk(config('estimates.disk'))->exists($row->image_path), 404);
 
-        return Storage::disk('local')->response(
+        return Storage::disk(config('estimates.disk'))->response(
             $row->image_path,
             "quote-page-{$page}.png",
             [

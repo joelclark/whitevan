@@ -18,6 +18,7 @@ use App\Models\Project;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -35,11 +36,9 @@ class EstimateController extends Controller
         abort_if($account === null, 403);
 
         $file = $request->file('pdf');
-        $path = $file->storeAs(
-            'estimate-pdfs',
-            Str::ulid().'.pdf',
-            'local',
-        );
+        $disk = config('estimates.disk');
+        $path = $file->storeAs('estimate-pdfs', Str::ulid().'.pdf', $disk);
+        Log::info('estimate.pdf.stored', ['disk' => $disk, 'path' => $path, 'size' => $file->getSize()]);
 
         $estimate = Estimate::create([
             'project_id' => $project->id,
@@ -196,7 +195,7 @@ class EstimateController extends Controller
         // skeleton state.
         $stalePages = $estimate->floorplanPages()->get();
         if ($stalePages->isNotEmpty()) {
-            Storage::disk('local')->delete($stalePages->pluck('image_path')->all());
+            Storage::disk(config('estimates.disk'))->delete($stalePages->pluck('image_path')->all());
             $estimate->floorplanPages()->delete();
         }
 
@@ -277,9 +276,9 @@ class EstimateController extends Controller
 
     public function pdf(Estimate $estimate): StreamedResponse
     {
-        abort_unless(Storage::disk('local')->exists($estimate->pdf_path), 404);
+        abort_unless(Storage::disk(config('estimates.disk'))->exists($estimate->pdf_path), 404);
 
-        return Storage::disk('local')->response(
+        return Storage::disk(config('estimates.disk'))->response(
             $estimate->pdf_path,
             $estimate->pdf_original_filename,
             ['Content-Type' => 'application/pdf'],
@@ -293,9 +292,9 @@ class EstimateController extends Controller
         // on $estimate via the BelongsToAccount global scope.
         $row = $estimate->floorplanPages()->where('page', $page)->firstOrFail();
 
-        abort_unless(Storage::disk('local')->exists($row->image_path), 404);
+        abort_unless(Storage::disk(config('estimates.disk'))->exists($row->image_path), 404);
 
-        return Storage::disk('local')->response(
+        return Storage::disk(config('estimates.disk'))->response(
             $row->image_path,
             "estimate-{$estimate->id}-page-{$page}.png",
             [
