@@ -1,4 +1,5 @@
 import { Form } from '@inertiajs/react';
+import { useEffect, useRef } from 'react';
 import type EstimateInterviewController from '@/actions/App/Http/Controllers/EstimateInterviewController';
 import { Button } from '@/components/ui/button';
 import type { Estimate, QuestionShape } from '@/types';
@@ -55,8 +56,25 @@ export function QuestionCard({
     eyebrow,
     onSubmitted,
 }: QuestionCardProps) {
+    const ref = useRef<HTMLDivElement>(null);
+    const isNextQuestion = eyebrow === 'Next question';
+
+    useEffect(() => {
+        if (!ref.current) {
+            return;
+        }
+
+        ref.current.scrollIntoView({
+            behavior: 'smooth',
+            block: isNextQuestion ? 'center' : 'nearest',
+        });
+    }, [isNextQuestion, question.key]);
+
     return (
-        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+        <div
+            ref={ref}
+            className="scroll-mt-24 scroll-mb-8 rounded-lg border border-primary/30 bg-primary/5 p-4"
+        >
             {eyebrow && (
                 <p className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                     {eyebrow}

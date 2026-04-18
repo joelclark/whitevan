@@ -30,7 +30,21 @@ class ProjectController extends Controller
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $like = '%'.$search.'%';
                 $query->where(function (Builder $q) use ($like): void {
+                    // Matches the fields that appear in the project's long
+                    // title: name / customer.last_name / resolved street.
+                    // Street resolution mirrors resolveProjectAddress() on the
+                    // frontend: the site override wins when set, otherwise the
+                    // customer's default address is what renders. first_name
+                    // and company aren't in the title but stay searchable as
+                    // "how humans refer to the customer".
                     $q->whereLike('name', $like, caseSensitive: false)
+                        ->orWhereLike('site_address_line_1', $like, caseSensitive: false)
+                        ->orWhere(function (Builder $inherited) use ($like): void {
+                            $inherited->whereNull('site_address_line_1')
+                                ->whereHas('customer', function (Builder $cq) use ($like): void {
+                                    $cq->whereLike('address_line_1', $like, caseSensitive: false);
+                                });
+                        })
                         ->orWhereHas('customer', function (Builder $cq) use ($like): void {
                             $cq->where(function (Builder $inner) use ($like): void {
                                 $inner->whereLike('first_name', $like, caseSensitive: false)

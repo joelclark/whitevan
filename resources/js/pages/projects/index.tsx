@@ -1,9 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Search } from 'lucide-react';
-import { useCallback, useEffect, useRef } from 'react';
 import Heading from '@/components/heading';
+import { SearchInput } from '@/components/search-input';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     edit as projectsEdit,
     index as projectsIndex,
@@ -49,23 +48,6 @@ function formatDate(value: string): string {
 }
 
 export default function ProjectsIndex({ projects, filters }: Props) {
-    const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const filtersRef = useRef(filters);
-
-    useEffect(() => {
-        filtersRef.current = filters;
-    }, [filters]);
-
-    const handleSearch = useCallback((value: string) => {
-        if (searchTimeout.current) {
-            clearTimeout(searchTimeout.current);
-        }
-
-        searchTimeout.current = setTimeout(() => {
-            applyFilters({ search: value }, filtersRef.current);
-        }, 300);
-    }, []);
-
     const hasProjects = projects.data.length > 0;
     const hasSearch = filters.search.length > 0;
 
@@ -82,15 +64,16 @@ export default function ProjectsIndex({ projects, filters }: Props) {
                 </div>
 
                 <div className="mb-4">
-                    <div className="relative w-full max-w-sm">
-                        <Search className="pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            placeholder="Search by project or customer…"
-                            defaultValue={filters.search}
-                            onChange={(e) => handleSearch(e.target.value)}
-                            className="h-12 pl-10 text-base"
-                        />
-                    </div>
+                    <SearchInput
+                        value={filters.search}
+                        onSearch={(search) => applyFilters({ search }, filters)}
+                        placeholder="Search by project or customer…"
+                        icon={
+                            <Search className="pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                        }
+                        className="h-12 pl-10 text-base"
+                        wrapperClassName="w-full max-w-sm"
+                    />
                 </div>
 
                 <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">

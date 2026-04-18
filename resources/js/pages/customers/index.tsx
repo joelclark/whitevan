@@ -1,9 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Plus, Search } from 'lucide-react';
-import { useCallback, useEffect, useRef } from 'react';
 import Heading from '@/components/heading';
+import { SearchInput } from '@/components/search-input';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     create as customersCreate,
     edit as customersEdit,
@@ -53,23 +52,6 @@ function formatLastViewed(value: string | null): string {
 }
 
 export default function CustomersIndex({ customers, filters }: Props) {
-    const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const filtersRef = useRef(filters);
-
-    useEffect(() => {
-        filtersRef.current = filters;
-    }, [filters]);
-
-    const handleSearch = useCallback((value: string) => {
-        if (searchTimeout.current) {
-            clearTimeout(searchTimeout.current);
-        }
-
-        searchTimeout.current = setTimeout(() => {
-            applyFilters({ search: value }, filtersRef.current);
-        }, 300);
-    }, []);
-
     const hasCustomers = customers.data.length > 0;
     const hasSearch = filters.search.length > 0;
 
@@ -92,15 +74,16 @@ export default function CustomersIndex({ customers, filters }: Props) {
                 </div>
 
                 <div className="mb-4">
-                    <div className="relative w-full max-w-sm">
-                        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            placeholder="Search by name, company, email, phone…"
-                            defaultValue={filters.search}
-                            onChange={(e) => handleSearch(e.target.value)}
-                            className="pl-9"
-                        />
-                    </div>
+                    <SearchInput
+                        value={filters.search}
+                        onSearch={(search) => applyFilters({ search }, filters)}
+                        placeholder="Search by name, company, email, phone…"
+                        icon={
+                            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        }
+                        className="pl-9"
+                        wrapperClassName="w-full max-w-sm"
+                    />
                 </div>
 
                 <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">

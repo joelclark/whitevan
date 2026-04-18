@@ -1,8 +1,8 @@
 import { Head, Link, router, setLayoutProps } from '@inertiajs/react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import { SearchInput } from '@/components/search-input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -78,33 +78,24 @@ export default function ActivityLogsIndex({
         description: 'View system-wide activity and events',
     });
 
-    const searchTimeout = useRef<ReturnType<typeof setTimeout>>(null);
     const filtersRef = useRef(filters);
 
     useEffect(() => {
         filtersRef.current = filters;
     }, [filters]);
 
-    const handleSearch = useCallback((value: string) => {
-        if (searchTimeout.current) {
-            clearTimeout(searchTimeout.current);
-        }
-
-        searchTimeout.current = setTimeout(() => {
-            applyFilters({ search: value }, filtersRef.current);
-        }, 300);
-    }, []);
-
     return (
         <>
             <Head title="Activity Log" />
 
             <div className="mb-4 flex flex-wrap items-center gap-3">
-                <Input
+                <SearchInput
+                    value={filters.search}
+                    onSearch={(search) =>
+                        applyFilters({ search }, filtersRef.current)
+                    }
                     placeholder="Search..."
-                    defaultValue={filters.search}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    className="w-64"
+                    wrapperClassName="w-64"
                 />
 
                 <Select

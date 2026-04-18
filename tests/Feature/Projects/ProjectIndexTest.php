@@ -113,6 +113,104 @@ test('the search query filters by customer name and company', function () {
         ->assertInertia(fn ($page) => $page->has('projects.data', 1));
 });
 
+test('the search query filters by project site address override', function () {
+    $account = Account::factory()->create();
+    $user = $account->owner;
+    $customer = Customer::factory()->create([
+        'account_id' => $account->id,
+        'first_name' => 'Jane',
+        'last_name' => 'Roe',
+        'company' => null,
+        'address_line_1' => '999 Home Street',
+    ]);
+
+    Project::factory()->forCustomer($customer)->create([
+        'name' => 'Renovation',
+        'site_address_line_1' => '4242 Zeppelin Way',
+    ]);
+    Project::factory()->forCustomer($customer)->create([
+        'name' => 'Other job',
+        'site_address_line_1' => '100 Other Rd',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('projects.index', ['search' => 'Zeppelin']))
+        ->assertInertia(fn ($page) => $page
+            ->has('projects.data', 1)
+            ->where('projects.data.0.site_address_line_1', '4242 Zeppelin Way')
+        );
+});
+
+test('the search query filters by customer address when the project has no site override', function () {
+    $account = Account::factory()->create();
+    $user = $account->owner;
+    $customer = Customer::factory()->create([
+        'account_id' => $account->id,
+        'first_name' => 'Jane',
+        'last_name' => 'Roe',
+        'company' => null,
+        'address_line_1' => '123 Maple Ave',
+    ]);
+
+    Project::factory()->forCustomer($customer)->create([
+        'name' => 'Inherit address',
+        'site_address_line_1' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('projects.index', ['search' => 'Maple']))
+        ->assertInertia(fn ($page) => $page->has('projects.data', 1));
+});
+
+test('the search query ignores the customer address when a project site override is set', function () {
+    $account = Account::factory()->create();
+    $user = $account->owner;
+    $customer = Customer::factory()->create([
+        'account_id' => $account->id,
+        'first_name' => 'Jane',
+        'last_name' => 'Roe',
+        'company' => null,
+        'address_line_1' => '789 Hidden Lane',
+    ]);
+
+    // Site override masks the customer address in the rendered title, so
+    // "Hidden" should not surface this project — otherwise the result list
+    // shows rows whose visible title doesn't contain the search term.
+    Project::factory()->forCustomer($customer)->create([
+        'name' => 'Override wins',
+        'site_address_line_1' => '1 Visible Blvd',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('projects.index', ['search' => 'Hidden']))
+        ->assertInertia(fn ($page) => $page->has('projects.data', 0));
+});
+
+test('the search query is case-insensitive across every searched field', function () {
+    $account = Account::factory()->create();
+    $user = $account->owner;
+    $customer = Customer::factory()->create([
+        'account_id' => $account->id,
+        'first_name' => 'Ada',
+        'last_name' => 'LOVELACE',
+        'company' => 'Analytical Engines',
+        'address_line_1' => '10 BABBAGE St',
+    ]);
+
+    Project::factory()->forCustomer($customer)->create([
+        'name' => 'BigProject',
+        'site_address_line_1' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('projects.index', ['search' => 'lovelace']))
+        ->assertInertia(fn ($page) => $page->has('projects.data', 1));
+
+    $this->actingAs($user)
+        ->get(route('projects.index', ['search' => 'babbage']))
+        ->assertInertia(fn ($page) => $page->has('projects.data', 1));
+});
+
 test('list payload includes customer for each row', function () {
     $account = Account::factory()->create();
     $user = $account->owner;
