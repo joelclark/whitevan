@@ -70,7 +70,7 @@ class Estimate extends Model
         // keeping the orphaned file would only bloat disk.
         static::deleting(function (self $estimate): void {
             if ($estimate->pdf_path !== null && $estimate->pdf_path !== '') {
-                Storage::disk('local')->delete($estimate->pdf_path);
+                Storage::disk(config('estimates.disk'))->delete($estimate->pdf_path);
             }
 
             // Floorplan PNGs follow the same disposable policy as the PDF —
@@ -79,7 +79,7 @@ class Estimate extends Model
             // would only fire on a hard delete.
             $imagePaths = $estimate->floorplanPages()->pluck('image_path')->all();
             if ($imagePaths !== []) {
-                Storage::disk('local')->delete($imagePaths);
+                Storage::disk(config('estimates.disk'))->delete($imagePaths);
             }
 
             $estimate->lineItems()->delete();

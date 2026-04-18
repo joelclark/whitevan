@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Ai\Agents\FloorPlanExtractionAgent;
+use App\Concerns\MaterializesEstimatePdf;
 use App\Enums\ActivityEvent;
 use App\Enums\AiAgentKind;
 use App\Enums\EstimateStatus;
@@ -20,7 +21,6 @@ use Illuminate\JsonSchema\Types\ObjectType;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Files\Document;
 use Throwable;
 
@@ -33,7 +33,7 @@ use Throwable;
  */
 class ProcessEstimatePdfJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, MaterializesEstimatePdf, Queueable, SerializesModels;
 
     public int $tries = 1;
 
@@ -51,7 +51,6 @@ class ProcessEstimatePdfJob implements ShouldQueue
         $agent = new FloorPlanExtractionAgent($setting);
 
         $prompt = 'Extract the floor plan from this PDF and return JSON matching the response format.';
-        $absolutePdfPath = Storage::disk('local')->path($estimate->pdf_path);
 
         // Build a request snapshot up-front so we can store it on the
         // estimate even if the provider rejects the call. This is the
@@ -65,7 +64,11 @@ class ProcessEstimatePdfJob implements ShouldQueue
             'ai_provider' => config('ai.default'),
         ];
 
+        $cleanup = fn () => null;
+
         try {
+            [$absolutePdfPath, $cleanup] = $this->materializePdf($estimate);
+
             $response = $agent->prompt(
                 $prompt,
                 attachments: [Document::fromPath($absolutePdfPath)],
@@ -78,6 +81,8 @@ class ProcessEstimatePdfJob implements ShouldQueue
             $this->persistFailure($estimate, $e, $requestSnapshot);
 
             throw $e;
+        } finally {
+            $cleanup();
         }
     }
 
