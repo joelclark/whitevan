@@ -36,6 +36,7 @@ test('deleting an estimate soft-deletes it and removes the PDF and floorplan ima
     Storage::disk('local')->assertMissing("estimate-floorplan-pages/{$estimate->id}/p1.png");
     Storage::disk('local')->assertMissing("estimate-floorplan-pages/{$estimate->id}/p3.png");
     expect(ActivityLog::where('event', ActivityEvent::EstimateDeleted)->count())->toBe(1);
+    expect($estimate)->toHaveRecordedProjectEvent(ActivityEvent::EstimateDeleted);
 });
 
 test('cross-tenant delete is blocked', function () {

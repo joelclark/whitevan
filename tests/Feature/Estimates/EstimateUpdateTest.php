@@ -22,6 +22,7 @@ test('members can rename an estimate', function () {
 
     expect($estimate->refresh()->title)->toBe('New title');
     expect(ActivityLog::where('event', ActivityEvent::EstimateUpdated)->count())->toBe(1);
+    expect($estimate)->toHaveRecordedProjectEvent(ActivityEvent::EstimateUpdated);
 });
 
 test('a member in another account cannot update the estimate', function () {

@@ -2,11 +2,13 @@
 
 use App\Enums\ActivityEvent;
 use App\Enums\QuoteStatus;
+use App\Mail\QuoteSentToCustomer;
 use App\Models\Account;
 use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\Estimate;
 use App\Models\EstimateLineItem;
+use Illuminate\Support\Facades\Mail;
 
 test('guests are redirected to login', function () {
     $account = Account::factory()->create();
@@ -130,4 +132,92 @@ test('activity event is fired on send', function () {
         ->post(route('estimates.send-quote', $estimate));
 
     expect(ActivityLog::where('event', ActivityEvent::EstimateQuoteSent)->count())->toBe(1);
+    expect($estimate)->toHaveRecordedProjectEvent(ActivityEvent::EstimateQuoteSent);
+});
+
+test('approval_token is generated on first send', function () {
+    Mail::fake();
+
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    $estimate = Estimate::factory()->forCustomer($customer)->create();
+    EstimateLineItem::factory()->create([
+        'estimate_id' => $estimate->id,
+        'unit_price' => 5.50,
+    ]);
+
+    $this->actingAs($account->owner)
+        ->post(route('estimates.send-quote', $estimate));
+
+    expect($estimate->refresh()->approval_token)->not->toBeNull();
+});
+
+test('re-send reuses the existing approval_token', function () {
+    Mail::fake();
+
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    $estimate = Estimate::factory()->forCustomer($customer)->quoteSent()->create([
+        'approval_token' => 'existing-approval-token-ulid',
+    ]);
+    EstimateLineItem::factory()->create([
+        'estimate_id' => $estimate->id,
+        'unit_price' => 5.50,
+    ]);
+
+    $this->actingAs($account->owner)
+        ->post(route('estimates.send-quote', $estimate));
+
+    expect($estimate->refresh()->approval_token)->toBe('existing-approval-token-ulid');
+});
+
+test('customer email with quote is queued on send', function () {
+    Mail::fake();
+
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create([
+        'account_id' => $account->id,
+        'email' => 'client@example.com',
+    ]);
+    $estimate = Estimate::factory()->forCustomer($customer)->create();
+    EstimateLineItem::factory()->create([
+        'estimate_id' => $estimate->id,
+        'unit_price' => 5.50,
+    ]);
+
+    $this->actingAs($account->owner)
+        ->post(route('estimates.send-quote', $estimate))
+        ->assertSessionHas('status', 'quote-sent');
+
+    Mail::assertQueued(
+        QuoteSentToCustomer::class,
+        fn (QuoteSentToCustomer $mail) => $mail->hasTo('client@example.com')
+            && $mail->estimate->is($estimate),
+    );
+});
+
+test('no mail is queued when customer has no email', function () {
+    Mail::fake();
+
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create([
+        'account_id' => $account->id,
+        'email' => null,
+    ]);
+    $estimate = Estimate::factory()->forCustomer($customer)->create();
+    EstimateLineItem::factory()->create([
+        'estimate_id' => $estimate->id,
+        'unit_price' => 5.50,
+    ]);
+
+    $this->actingAs($account->owner)
+        ->post(route('estimates.send-quote', $estimate))
+        ->assertSessionHas('status', 'quote-saved-no-email');
+
+    Mail::assertNothingQueued();
+
+    // Quote itself still transitioned and approval_token was still generated.
+    $estimate->refresh();
+    expect($estimate->quote_status)->toBe(QuoteStatus::Sent)
+        ->and($estimate->approval_token)->not->toBeNull();
 });

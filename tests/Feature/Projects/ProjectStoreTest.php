@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ActivityEvent;
 use App\Models\Account;
 use App\Models\ActivityLog;
 use App\Models\Customer;
@@ -35,6 +36,7 @@ test('members can create a project for a customer', function () {
     expect($project->site_state)->toBe('TX');
 
     expect(ActivityLog::where('event', 'project.created')->count())->toBe(1);
+    expect($project)->toHaveRecordedProjectEvent(ActivityEvent::ProjectCreated);
 });
 
 test('project name is required', function () {

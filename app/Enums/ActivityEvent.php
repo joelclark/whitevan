@@ -27,7 +27,6 @@ enum ActivityEvent: string
     case EstimateFloorplanAssetsFailed = 'estimate.floorplan_assets_failed';
     case EstimateInterviewCompleted = 'estimate.interview_completed';
     case EstimateQuoteSent = 'estimate.quote_sent';
-    case EstimateQuoteViewed = 'estimate.quote_viewed';
     case AiAgentSettingUpdated = 'ai.agent_setting_updated';
 
     public function label(): string
@@ -56,8 +55,44 @@ enum ActivityEvent: string
             self::EstimateFloorplanAssetsFailed => 'Estimate floorplan asset extraction failed',
             self::EstimateInterviewCompleted => 'Estimate interview completed',
             self::EstimateQuoteSent => 'Quote sent',
-            self::EstimateQuoteViewed => 'Quote viewed by customer',
             self::AiAgentSettingUpdated => 'AI agent setting updated',
+        };
+    }
+
+    /**
+     * Whether this event is safe to surface on the customer-facing project
+     * timeline. Used by ProjectEventLogger to set `customer_visible` when a
+     * row is written. Keep this exhaustive — a missing case throws
+     * UnhandledMatchError, which the ActivityEventTest guardrail catches.
+     */
+    public function isCustomerVisible(): bool
+    {
+        return match ($this) {
+            self::ProjectCreated,
+            self::EstimateCreated,
+            self::EstimateQuoteSent => true,
+
+            self::UserLoggedIn,
+            self::UserPasswordReset,
+            self::UserTwoFactorEnabled,
+            self::UserTwoFactorDisabled,
+            self::UserActivated,
+            self::UserDeactivated,
+            self::UserSecurityGroupAdded,
+            self::UserSecurityGroupRemoved,
+            self::SysopImpersonationStarted,
+            self::SysopImpersonationStopped,
+            self::CustomerCreated,
+            self::CustomerUpdated,
+            self::CustomerDeleted,
+            self::ProjectUpdated,
+            self::ProjectDeleted,
+            self::EstimateUpdated,
+            self::EstimateDeleted,
+            self::EstimateAgentFailed,
+            self::EstimateFloorplanAssetsFailed,
+            self::EstimateInterviewCompleted,
+            self::AiAgentSettingUpdated => false,
         };
     }
 }

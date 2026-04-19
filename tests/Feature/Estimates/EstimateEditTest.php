@@ -185,6 +185,34 @@ test('edit payload includes customer and project for the record header', functio
         );
 });
 
+test('edit payload includes an absolute approval_url when the quote is sent', function () {
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    $estimate = Estimate::factory()->forCustomer($customer)->quoteSent()->create([
+        'approval_token' => '01hxyz0000000000000000appr1',
+    ]);
+
+    $this->actingAs($account->owner)
+        ->get(route('estimates.edit', $estimate))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('estimates/edit')
+            ->where('estimate.approval_url', route('approve.show', ['approval_token' => '01hxyz0000000000000000appr1']))
+        );
+});
+
+test('edit payload approval_url is null when the quote has not been sent', function () {
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    $estimate = Estimate::factory()->forCustomer($customer)->create();
+
+    $this->actingAs($account->owner)
+        ->get(route('estimates.edit', $estimate))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('estimates/edit')
+            ->where('estimate.approval_url', null)
+        );
+});
+
 test('edit page reports is_complete when all questions are answered', function () {
     $account = Account::factory()->create();
     $customer = Customer::factory()->create(['account_id' => $account->id]);

@@ -69,7 +69,12 @@ export default function UploadEstimateDialog({ project, trigger }: Props) {
 
                 <Form
                     {...EstimateController.store.form(project.id)}
-                    onStart={() => console.log('[upload] start', { name: file?.name, size: file?.size })}
+                    onStart={() =>
+                        console.log('[upload] start', {
+                            name: file?.name,
+                            size: file?.size,
+                        })
+                    }
                     onSuccess={() => {
                         console.log('[upload] success');
                         setOpen(false);

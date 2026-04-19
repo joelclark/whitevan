@@ -176,4 +176,5 @@ test('completing the interview fires EstimateInterviewCompleted exactly once', f
     $post(answer($estimate, 'toilet_pulls', 1));
 
     expect(ActivityLog::where('event', ActivityEvent::EstimateInterviewCompleted)->count())->toBe(1);
+    expect($estimate)->toHaveRecordedProjectEvent(ActivityEvent::EstimateInterviewCompleted);
 });

@@ -160,16 +160,3 @@ test('sending a quote bumps its project last_activity_at', function () {
 
     expect($project->fresh()->last_activity_at->greaterThan($before))->toBeTrue();
 });
-
-test('public quote view bumps its project last_activity_at', function () {
-    $account = Account::factory()->create();
-    $project = projectWithStaleActivity($account);
-    $estimate = Estimate::factory()->forProject($project)->quoteSent()->create();
-    // The customer-view branch only fires for guests, so don't actingAs.
-    $before = $project->fresh()->last_activity_at;
-
-    $this->get(route('quotes.show', $estimate->quote_token))
-        ->assertOk();
-
-    expect($project->fresh()->last_activity_at->greaterThan($before))->toBeTrue();
-});

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ActivityEvent;
 use App\Models\Account;
 use App\Models\ActivityLog;
 use App\Models\Customer;
@@ -28,6 +29,7 @@ test('members can update a project', function () {
     expect($project->site_city)->toBe('Dallas');
 
     expect(ActivityLog::where('event', 'project.updated')->count())->toBe(1);
+    expect($project)->toHaveRecordedProjectEvent(ActivityEvent::ProjectUpdated);
 });
 
 test('project name is required on update', function () {

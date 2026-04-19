@@ -16,6 +16,7 @@ use App\Jobs\ProcessEstimatePdfJob;
 use App\Models\Estimate;
 use App\Models\Project;
 use App\Services\ActivityLogger;
+use App\Services\ProjectEventLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -66,6 +67,13 @@ class EstimateController extends Controller
             ],
             account: $account,
             user: $request->user(),
+        );
+
+        ProjectEventLogger::record(
+            $estimate,
+            ActivityEvent::EstimateCreated,
+            user: $request->user(),
+            metadata: ['pdf_original_filename' => $estimate->pdf_original_filename],
         );
 
         return redirect()->route('estimates.edit', $estimate);
@@ -134,6 +142,10 @@ class EstimateController extends Controller
             ->values()
             ->all();
 
+        $serialized['approval_url'] = $estimate->isQuoteSent() && $estimate->approval_token !== null
+            ? route('approve.show', ['approval_token' => $estimate->approval_token])
+            : null;
+
         return Inertia::render('estimates/edit', [
             'estimate' => $serialized,
             'interview' => $interviewProps,
@@ -167,6 +179,12 @@ class EstimateController extends Controller
                     'project_id' => $estimate->project_id,
                 ],
                 account: $account,
+                user: $request->user(),
+            );
+
+            ProjectEventLogger::record(
+                $estimate,
+                ActivityEvent::EstimateUpdated,
                 user: $request->user(),
             );
         }
@@ -235,6 +253,14 @@ class EstimateController extends Controller
 
         $estimateId = $estimate->id;
         $projectId = $estimate->project_id;
+
+        // Record before delete so the (future) hard-delete path can't break
+        // the FK. Soft-delete keeps the row so this order is also fine today.
+        ProjectEventLogger::record(
+            $estimate,
+            ActivityEvent::EstimateDeleted,
+            user: $request->user(),
+        );
 
         $estimate->delete();
         $estimate->recordProjectActivity();

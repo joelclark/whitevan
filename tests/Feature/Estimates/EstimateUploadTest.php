@@ -53,6 +53,7 @@ test('members can upload a PDF and create an estimate in processing status', fun
     );
 
     expect(ActivityLog::where('event', ActivityEvent::EstimateCreated)->count())->toBe(1);
+    expect($estimate)->toHaveRecordedProjectEvent(ActivityEvent::EstimateCreated);
 });
 
 test('only PDF files are accepted', function () {

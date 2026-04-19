@@ -9,6 +9,7 @@ use App\Http\Requests\ProjectUpdateRequest;
 use App\Models\Customer;
 use App\Models\Project;
 use App\Services\ActivityLogger;
+use App\Services\ProjectEventLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -88,6 +89,13 @@ class ProjectController extends Controller
             user: $request->user(),
         );
 
+        ProjectEventLogger::record(
+            $project,
+            ActivityEvent::ProjectCreated,
+            user: $request->user(),
+            metadata: ['project_name' => $project->name],
+        );
+
         return redirect()
             ->route('projects.edit', $project)
             ->with('status', 'project-created');
@@ -98,10 +106,40 @@ class ProjectController extends Controller
         $project->load([
             'customer',
             'estimates' => fn ($q) => $q->orderByDesc('updated_at')->orderByDesc('id'),
+            'events' => fn ($q) => $q->orderByDesc('created_at')->orderByDesc('id'),
+            'events.user:id,name,email',
+            'events.estimate:id,title,pdf_original_filename,deleted_at',
         ]);
+
+        // Flatten events into the shape the frontend consumes. Shipped as a
+        // sibling prop (matches the `floorplan_pages` / `line_items`
+        // convention on EstimateController::edit) so `Project.events` stays
+        // off the Inertia type and the frontend isn't tempted to reach into
+        // raw model relations.
+        $events = $project->events->map(function ($event) {
+            $estimate = $event->estimate;
+            $user = $event->user;
+
+            return [
+                'id' => $event->id,
+                'event' => $event->event->value,
+                'event_label' => $event->event->label(),
+                'actor_type' => $event->actor_type->value,
+                'actor_name' => $user?->name,
+                'estimate_id' => $event->estimate_id,
+                'estimate_title' => $estimate?->title ?? $estimate?->pdf_original_filename,
+                // Timeline rows survive estimate soft-deletes, but the edit
+                // route does not — flag deleted rows so the frontend renders
+                // them as read-only history instead of broken links.
+                'estimate_deleted' => $estimate !== null && $estimate->trashed(),
+                'metadata' => $event->metadata,
+                'created_at' => $event->created_at->toIso8601String(),
+            ];
+        })->values()->all();
 
         return Inertia::render('projects/edit', [
             'project' => $project,
+            'events' => $events,
         ]);
     }
 
@@ -127,6 +165,13 @@ class ProjectController extends Controller
             user: $request->user(),
         );
 
+        ProjectEventLogger::record(
+            $project,
+            ActivityEvent::ProjectUpdated,
+            user: $request->user(),
+            metadata: ['project_name' => $project->name],
+        );
+
         return back()->with('status', 'project-updated');
     }
 
@@ -147,6 +192,13 @@ class ProjectController extends Controller
         } catch (QueryException $e) {
             return back()->with('status', 'project-delete-failed');
         }
+
+        ProjectEventLogger::record(
+            $project,
+            ActivityEvent::ProjectDeleted,
+            user: $request->user(),
+            metadata: ['project_name' => $projectName],
+        );
 
         ActivityLogger::event(
             ActivityEvent::ProjectDeleted,
