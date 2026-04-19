@@ -3,6 +3,7 @@ import {
     Activity,
     Bot,
     Contact,
+    FileText,
     FolderKanban,
     LayoutGrid,
     Settings,
@@ -28,6 +29,7 @@ import { dashboard as sysopsDashboard } from '@/routes/sysops';
 import { index as sysopsAccountsIndex } from '@/routes/sysops/accounts';
 import { index as sysopsActivityLogsIndex } from '@/routes/sysops/activity-logs';
 import { index as sysopsAiAgentsIndex } from '@/routes/sysops/ai-agents';
+import { index as sysopsContractTemplatesIndex } from '@/routes/sysops/contract-templates';
 import type { Auth, NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -75,6 +77,11 @@ const sysopsNavItems: NavItem[] = [
         title: 'AI Agents',
         href: sysopsAiAgentsIndex().url,
         icon: Bot,
+    },
+    {
+        title: 'Contract Templates',
+        href: sysopsContractTemplatesIndex().url,
+        icon: FileText,
     },
 ];
 
