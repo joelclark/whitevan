@@ -25,6 +25,7 @@ class QuoteController extends Controller
         $account = $accountContext->get();
         abort_if($account === null, 403);
 
+        abort_if($estimate->isLocked(), 409, 'Estimate is locked after customer acceptance.');
         abort_unless($estimate->status === EstimateStatus::Ready, 422);
         abort_unless(
             $estimate->activeLineItems()->whereNull('unit_price')->doesntExist(),

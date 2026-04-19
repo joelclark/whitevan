@@ -65,20 +65,24 @@ test('completing the interview persists line items', function () {
     expect($lineItems)->not->toBeEmpty();
 
     $keys = $lineItems->pluck('key')->all();
-    expect($keys)->toContain('install_lvp')
+    expect($keys)->toContain('install_lvp_material')
+        ->toContain('install_lvp_labor')
         ->toContain('remove_carpet')
         ->toContain('subfloor_minor_patch')
         ->toContain('furniture_heavy')
-        ->toContain('baseboards_remove_replace')
-        ->toContain('quarter_round_new')
-        ->toContain('transitions')
+        ->toContain('baseboards_remove_replace_material')
+        ->toContain('baseboards_remove_replace_labor')
+        ->toContain('quarter_round_new_material')
+        ->toContain('quarter_round_new_labor')
+        ->toContain('transitions_material')
+        ->toContain('transitions_labor')
         ->toContain('door_undercuts')
         ->toContain('toilet_pulls')
         ->toContain('haul_away_van');
 
-    $installLvp = $lineItems->firstWhere('key', 'install_lvp');
-    expect($installLvp->quantity)->toBe('200.00')
-        ->and($installLvp->category)->toBe(LineItemCategory::Install);
+    $installLvpLabor = $lineItems->firstWhere('key', 'install_lvp_labor');
+    expect($installLvpLabor->quantity)->toBe('200.00')
+        ->and($installLvpLabor->category)->toBe(LineItemCategory::Install);
 
     $heavy = $lineItems->firstWhere('key', 'furniture_heavy');
     expect($heavy->quantity)->toBe('2.00');
@@ -233,7 +237,7 @@ test('unit price rejects values over the max', function () {
         ->assertSessionHasErrors('unit_price');
 });
 
-test('unit price requires the field to be present', function () {
+test('notes can be set on a line item', function () {
     $account = Account::factory()->create();
     $estimate = lineItemEstimate($account);
 
@@ -242,8 +246,13 @@ test('unit price requires the field to be present', function () {
     $lineItem = EstimateLineItem::where('estimate_id', $estimate->id)->first();
 
     $this->actingAs($account->owner)
-        ->patch(route('estimates.line-items.update', [$estimate, $lineItem]), [])
-        ->assertSessionHasErrors('unit_price');
+        ->patch(route('estimates.line-items.update', [$estimate, $lineItem]), [
+            'notes' => 'Mohawk SolidTech 20mil, graphite',
+        ])
+        ->assertRedirect();
+
+    $lineItem->refresh();
+    expect($lineItem->notes)->toBe('Mohawk SolidTech 20mil, graphite');
 });
 
 test('deleting an estimate removes its line items', function () {

@@ -19,6 +19,7 @@ class ContractSignRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'acknowledged' => ['required', 'accepted'],
+            'quote_hash' => ['required', 'string'],
         ];
     }
 }

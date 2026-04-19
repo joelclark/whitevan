@@ -63,6 +63,10 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => $auth,
+            'flash' => [
+                'status' => fn () => $request->session()->get('status'),
+                'quote_changed' => fn () => $request->session()->get('quote_changed'),
+            ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

@@ -24,6 +24,11 @@ type Props = {
     interview: InterviewProps | null;
     floorplan_pages: FloorplanPagePreview[];
     line_items: EstimateLineItem[];
+    deposit_defaults: {
+        material_deposit_percent: number;
+        labor_deposit_percent: number;
+    };
+    is_locked: boolean;
 };
 
 export default function EstimatesEdit({
@@ -31,6 +36,8 @@ export default function EstimatesEdit({
     interview,
     floorplan_pages,
     line_items,
+    deposit_defaults,
+    is_locked,
 }: Props) {
     const { auth } = usePage<{ auth: Auth }>().props;
     const isProcessing = estimate.status === 'processing';
@@ -72,6 +79,8 @@ export default function EstimatesEdit({
                     'interview',
                     'floorplan_pages',
                     'line_items',
+                    'deposit_defaults',
+                    'is_locked',
                 ],
             });
         }, 2000);
@@ -215,6 +224,8 @@ export default function EstimatesEdit({
                             <LineItemsPanel
                                 estimateId={estimate.id}
                                 lineItems={line_items}
+                                depositDefaults={deposit_defaults}
+                                isLocked={is_locked}
                             />
                         </section>
                     )}

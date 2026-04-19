@@ -196,6 +196,52 @@ test('customer email with quote is queued on send', function () {
     );
 });
 
+test('cannot send when estimate is locked', function () {
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    $estimate = Estimate::factory()->forCustomer($customer)->quoteSent()->create([
+        'locked_at' => now(),
+    ]);
+    EstimateLineItem::factory()->create([
+        'estimate_id' => $estimate->id,
+        'unit_price' => 5.50,
+    ]);
+
+    $this->actingAs($account->owner)
+        ->post(route('estimates.send-quote', $estimate))
+        ->assertStatus(409);
+});
+
+test('invitation email body contains no totals and only the approval link', function () {
+    $account = Account::factory()->create(['name' => 'Acme Floors']);
+    $customer = Customer::factory()->create([
+        'account_id' => $account->id,
+        'first_name' => 'Pat',
+        'email' => 'pat@example.com',
+    ]);
+    $estimate = Estimate::factory()->forCustomer($customer)->create([
+        'title' => 'Upstairs hallway',
+        'total_sqft' => 420,
+    ]);
+    EstimateLineItem::factory()->create([
+        'estimate_id' => $estimate->id,
+        'unit_price' => 5.50,
+    ]);
+
+    $this->actingAs($account->owner)
+        ->post(route('estimates.send-quote', $estimate));
+
+    $estimate->refresh();
+    $mail = new QuoteSentToCustomer($estimate);
+    $rendered = $mail->render();
+
+    expect($rendered)->toContain('Your quote is ready');
+    expect($rendered)->toContain('Upstairs hallway');
+    expect($rendered)->toContain('View and accept your quote');
+    expect($rendered)->toContain($estimate->approval_token);
+    expect($rendered)->not->toContain('$'); // no dollar amounts in the invitation
+});
+
 test('no mail is queued when customer has no email', function () {
     Mail::fake();
 

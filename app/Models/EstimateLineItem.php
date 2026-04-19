@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\LineItemCategory;
+use App\Enums\LineItemKind;
 use App\Enums\LineItemUnit;
 use Database\Factories\EstimateLineItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'key',
     'label',
     'category',
+    'kind',
     'quantity',
     'unit',
     'unit_price',
@@ -35,6 +37,7 @@ class EstimateLineItem extends Model
     {
         return [
             'category' => LineItemCategory::class,
+            'kind' => LineItemKind::class,
             'unit' => LineItemUnit::class,
             'quantity' => 'decimal:2',
             'unit_price' => 'decimal:2',

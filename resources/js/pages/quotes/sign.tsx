@@ -14,17 +14,51 @@ type Signed = {
     signed_at: string;
 };
 
+type QuoteItem = {
+    id: number;
+    kind: 'material' | 'labor';
+    label: string;
+    category: string;
+    quantity: string;
+    unit: string;
+    unit_price: string;
+    notes: string | null;
+    line_total: string;
+};
+
+type Quote = {
+    material_percent: number;
+    labor_percent: number;
+    items: QuoteItem[];
+    material_subtotal: string;
+    labor_subtotal: string;
+    grand_total: string;
+    material_deposit: string;
+    labor_deposit: string;
+    deposit_total: string;
+};
+
 type Props = {
     estimate: {
         title: string;
     };
     account_name: string;
     approval_token: string;
+    quote: Quote;
+    quote_hash: string;
+    is_locked: boolean;
     contract: {
         body_html: string;
         signed: Signed | null;
     };
 };
+
+function formatMoney(value: string): string {
+    return Number(value).toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD',
+    });
+}
 
 function formatDate(value: string): string {
     const date = new Date(value);
@@ -43,6 +77,8 @@ export default function QuoteSign({
     estimate,
     account_name,
     approval_token,
+    quote,
+    quote_hash,
     contract,
 }: Props) {
     const signed = contract.signed;
@@ -85,6 +121,47 @@ export default function QuoteSign({
                     </section>
                 )}
 
+                {!signed && (
+                    <section className="rounded-xl border bg-card p-5">
+                        <h2 className="mb-3 text-base font-semibold">
+                            You are agreeing to pay
+                        </h2>
+                        <div className="space-y-1 text-sm">
+                            <div className="grid grid-cols-[1fr_auto] gap-3">
+                                <span className="text-muted-foreground">
+                                    Materials subtotal
+                                </span>
+                                <span className="tabular-nums">
+                                    {formatMoney(quote.material_subtotal)}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-[1fr_auto] gap-3">
+                                <span className="text-muted-foreground">
+                                    Labor subtotal
+                                </span>
+                                <span className="tabular-nums">
+                                    {formatMoney(quote.labor_subtotal)}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-[1fr_auto] gap-3 border-t pt-2 text-base font-semibold">
+                                <span>Total</span>
+                                <span className="tabular-nums">
+                                    {formatMoney(quote.grand_total)}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-[1fr_auto] gap-3 pt-2 text-sm">
+                                <span className="text-muted-foreground">
+                                    Deposit due today ({quote.material_percent}%
+                                    materials, {quote.labor_percent}% labor)
+                                </span>
+                                <span className="font-semibold tabular-nums">
+                                    {formatMoney(quote.deposit_total)}
+                                </span>
+                            </div>
+                        </div>
+                    </section>
+                )}
+
                 <article
                     className="prose prose-sm dark:prose-invert max-w-none"
                     dangerouslySetInnerHTML={{
@@ -111,6 +188,12 @@ export default function QuoteSign({
                                         recorded with the agreement.
                                     </p>
                                 </div>
+
+                                <input
+                                    type="hidden"
+                                    name="quote_hash"
+                                    value={quote_hash}
+                                />
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="name">
@@ -141,10 +224,11 @@ export default function QuoteSign({
                                         className="text-sm leading-snug font-normal"
                                     >
                                         I have read and agree to the agreement
-                                        above.
+                                        above and the figures shown.
                                     </Label>
                                 </div>
                                 <InputError message={errors.acknowledged} />
+                                <InputError message={errors.quote_hash} />
 
                                 <Button
                                     type="submit"

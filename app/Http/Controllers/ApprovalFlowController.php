@@ -4,16 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Enums\QuoteStatus;
 use App\Models\Estimate;
+use App\Services\QuoteSnapshot;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ApprovalFlowController extends Controller
 {
-    public function show(string $approval_token): Response
+    public function show(string $approval_token, QuoteSnapshot $snapshot): Response
     {
         $estimate = self::findEstimateByToken($approval_token);
 
         $signed = $estimate->hasSignedContract();
+        $quote = $snapshot->build($estimate);
+        $quoteHash = $snapshot->hash($quote);
 
         return Inertia::render('quotes/approve', [
             'estimate' => [
@@ -24,6 +27,9 @@ class ApprovalFlowController extends Controller
             ],
             'account_name' => $estimate->account->name,
             'approval_token' => $approval_token,
+            'quote' => $quote,
+            'quote_hash' => $quoteHash,
+            'is_locked' => $estimate->isLocked(),
             'contract' => [
                 'signed' => $signed
                     ? [

@@ -6,6 +6,7 @@ import {
     FileText,
     FolderKanban,
     LayoutGrid,
+    Percent,
     Settings,
     Shield,
 } from 'lucide-react';
@@ -30,6 +31,7 @@ import { index as sysopsAccountsIndex } from '@/routes/sysops/accounts';
 import { index as sysopsActivityLogsIndex } from '@/routes/sysops/activity-logs';
 import { index as sysopsAiAgentsIndex } from '@/routes/sysops/ai-agents';
 import { index as sysopsContractTemplatesIndex } from '@/routes/sysops/contract-templates';
+import { edit as sysopsDepositsEdit } from '@/routes/sysops/deposits';
 import type { Auth, NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -82,6 +84,11 @@ const sysopsNavItems: NavItem[] = [
         title: 'Contract Templates',
         href: sysopsContractTemplatesIndex().url,
         icon: FileText,
+    },
+    {
+        title: 'Deposit Settings',
+        href: sysopsDepositsEdit().url,
+        icon: Percent,
     },
 ];
 

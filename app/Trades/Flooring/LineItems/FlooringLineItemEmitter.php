@@ -3,6 +3,7 @@
 namespace App\Trades\Flooring\LineItems;
 
 use App\Enums\LineItemCategory;
+use App\Enums\LineItemKind;
 use App\Enums\LineItemUnit;
 use App\Interviews\LineItemDraft;
 use App\Interviews\TradeLineItemEmitter;
@@ -92,6 +93,7 @@ class FlooringLineItemEmitter implements TradeLineItemEmitter
                 key: "remove_{$existing}",
                 label: "Remove {$label}",
                 category: LineItemCategory::Demo,
+                kind: LineItemKind::Labor,
                 quantity: $sqft,
                 unit: LineItemUnit::Sqft,
             );
@@ -119,6 +121,7 @@ class FlooringLineItemEmitter implements TradeLineItemEmitter
                 key: "subfloor_{$type}",
                 label: "Subfloor {$label}",
                 category: LineItemCategory::Prep,
+                kind: LineItemKind::Labor,
                 quantity: $sqft,
                 unit: LineItemUnit::Sqft,
             );
@@ -126,6 +129,11 @@ class FlooringLineItemEmitter implements TradeLineItemEmitter
     }
 
     /**
+     * Install items always split into material + labor pairs, keyed
+     * `install_{material}_material` / `install_{material}_labor`. A future
+     * materials catalog will pre-fill unit_price on the material row without
+     * changing the shape.
+     *
      * @param  list<LineItemDraft>  $items
      */
     private function emitInstallItems(array &$items, $rooms, array $roomAnswers): void
@@ -142,10 +150,21 @@ class FlooringLineItemEmitter implements TradeLineItemEmitter
 
         foreach ($sqftByMaterial as $material => $sqft) {
             $label = self::MATERIAL_LABELS[$material] ?? $material;
+
             $items[] = new LineItemDraft(
-                key: "install_{$material}",
-                label: "Install {$label}",
+                key: "install_{$material}_material",
+                label: "{$label} — materials",
                 category: LineItemCategory::Install,
+                kind: LineItemKind::Material,
+                quantity: $this->materialWithWaste($sqft, LineItemUnit::Sqft),
+                unit: LineItemUnit::Sqft,
+            );
+
+            $items[] = new LineItemDraft(
+                key: "install_{$material}_labor",
+                label: "Install {$label} — labor",
+                category: LineItemCategory::Install,
+                kind: LineItemKind::Labor,
                 quantity: $sqft,
                 unit: LineItemUnit::Sqft,
             );
@@ -175,6 +194,7 @@ class FlooringLineItemEmitter implements TradeLineItemEmitter
                 key: 'furniture_move_replace',
                 label: 'Move & Replace Furniture',
                 category: LineItemCategory::Services,
+                kind: LineItemKind::Labor,
                 quantity: $moveReplaceCount,
                 unit: LineItemUnit::Each,
             );
@@ -185,6 +205,7 @@ class FlooringLineItemEmitter implements TradeLineItemEmitter
                 key: 'furniture_heavy',
                 label: 'Move Heavy Items',
                 category: LineItemCategory::Services,
+                kind: LineItemKind::Labor,
                 quantity: $heavyTotal,
                 unit: LineItemUnit::Each,
             );
@@ -192,6 +213,10 @@ class FlooringLineItemEmitter implements TradeLineItemEmitter
     }
 
     /**
+     * Trim items split into material + labor when new material is added
+     * (baseboards `remove_replace`, quarter round `new`, transitions). Reuse
+     * variants stay labor-only since no new material is purchased.
+     *
      * @param  list<LineItemDraft>  $items
      */
     private function emitTrimItems(array &$items, $rooms, array $projectWide): void
@@ -201,33 +226,84 @@ class FlooringLineItemEmitter implements TradeLineItemEmitter
         $baseboards = $projectWide['baseboards'] ?? null;
         if ($baseboards !== null && $baseboards !== 'leave' && $totalLinearFeet > 0) {
             $label = self::BASEBOARD_LABELS[$baseboards] ?? $baseboards;
-            $items[] = new LineItemDraft(
-                key: "baseboards_{$baseboards}",
-                label: "Baseboards {$label}",
-                category: LineItemCategory::Trim,
-                quantity: $totalLinearFeet,
-                unit: LineItemUnit::LinearFeet,
-            );
+
+            if ($baseboards === 'remove_replace') {
+                $items[] = new LineItemDraft(
+                    key: "baseboards_{$baseboards}_material",
+                    label: "Baseboards {$label} — materials",
+                    category: LineItemCategory::Trim,
+                    kind: LineItemKind::Material,
+                    quantity: $this->materialWithWaste($totalLinearFeet, LineItemUnit::LinearFeet),
+                    unit: LineItemUnit::LinearFeet,
+                );
+                $items[] = new LineItemDraft(
+                    key: "baseboards_{$baseboards}_labor",
+                    label: "Baseboards {$label} — labor",
+                    category: LineItemCategory::Trim,
+                    kind: LineItemKind::Labor,
+                    quantity: $totalLinearFeet,
+                    unit: LineItemUnit::LinearFeet,
+                );
+            } else {
+                $items[] = new LineItemDraft(
+                    key: "baseboards_{$baseboards}",
+                    label: "Baseboards {$label}",
+                    category: LineItemCategory::Trim,
+                    kind: LineItemKind::Labor,
+                    quantity: $totalLinearFeet,
+                    unit: LineItemUnit::LinearFeet,
+                );
+            }
         }
 
         $quarterRound = $projectWide['quarter_round'] ?? null;
         if ($quarterRound !== null && $quarterRound !== 'none' && $totalLinearFeet > 0) {
             $label = self::QUARTER_ROUND_LABELS[$quarterRound] ?? $quarterRound;
-            $items[] = new LineItemDraft(
-                key: "quarter_round_{$quarterRound}",
-                label: "Quarter Round ({$label})",
-                category: LineItemCategory::Trim,
-                quantity: $totalLinearFeet,
-                unit: LineItemUnit::LinearFeet,
-            );
+
+            if ($quarterRound === 'new') {
+                $items[] = new LineItemDraft(
+                    key: 'quarter_round_new_material',
+                    label: 'Quarter Round (New) — materials',
+                    category: LineItemCategory::Trim,
+                    kind: LineItemKind::Material,
+                    quantity: $this->materialWithWaste($totalLinearFeet, LineItemUnit::LinearFeet),
+                    unit: LineItemUnit::LinearFeet,
+                );
+                $items[] = new LineItemDraft(
+                    key: 'quarter_round_new_labor',
+                    label: 'Quarter Round (New) — labor',
+                    category: LineItemCategory::Trim,
+                    kind: LineItemKind::Labor,
+                    quantity: $totalLinearFeet,
+                    unit: LineItemUnit::LinearFeet,
+                );
+            } else {
+                $items[] = new LineItemDraft(
+                    key: "quarter_round_{$quarterRound}",
+                    label: "Quarter Round ({$label})",
+                    category: LineItemCategory::Trim,
+                    kind: LineItemKind::Labor,
+                    quantity: $totalLinearFeet,
+                    unit: LineItemUnit::LinearFeet,
+                );
+            }
         }
 
         $transitions = (int) ($projectWide['transitions'] ?? 0);
         if ($transitions > 0) {
             $items[] = new LineItemDraft(
-                key: 'transitions',
-                label: 'Transition Strips',
+                key: 'transitions_material',
+                label: 'Transition Strips — materials',
                 category: LineItemCategory::Trim,
+                kind: LineItemKind::Material,
+                quantity: $this->materialWithWaste($transitions, LineItemUnit::Each),
+                unit: LineItemUnit::Each,
+            );
+            $items[] = new LineItemDraft(
+                key: 'transitions_labor',
+                label: 'Transition Strips — labor',
+                category: LineItemCategory::Trim,
+                kind: LineItemKind::Labor,
                 quantity: $transitions,
                 unit: LineItemUnit::Each,
             );
@@ -245,6 +321,7 @@ class FlooringLineItemEmitter implements TradeLineItemEmitter
                 key: 'door_undercuts',
                 label: 'Door Undercuts',
                 category: LineItemCategory::Services,
+                kind: LineItemKind::Labor,
                 quantity: $doorUndercuts,
                 unit: LineItemUnit::Each,
             );
@@ -256,6 +333,7 @@ class FlooringLineItemEmitter implements TradeLineItemEmitter
                 key: 'toilet_pulls',
                 label: 'Toilet Pull & Reset',
                 category: LineItemCategory::Services,
+                kind: LineItemKind::Labor,
                 quantity: $toiletPulls,
                 unit: LineItemUnit::Each,
             );
@@ -268,10 +346,36 @@ class FlooringLineItemEmitter implements TradeLineItemEmitter
                 key: "haul_away_{$haulAway}",
                 label: "Demo Haul-Away ({$label})",
                 category: LineItemCategory::Services,
+                kind: LineItemKind::Labor,
                 quantity: 1,
                 unit: LineItemUnit::Each,
             );
         }
+    }
+
+    /**
+     * Bump material quantities for cut waste. Bulk units (sqft, lf) get a
+     * flat 10% + round-up to the next multiple of 10 — matches how flooring,
+     * baseboards, and quarter round are actually purchased and cut. Each
+     * units (transitions) are discrete pieces with no cut waste, so they
+     * pass through unchanged.
+     */
+    private function materialWithWaste(float $quantity, LineItemUnit $unit): float
+    {
+        if ($quantity <= 0) {
+            return 0.0;
+        }
+
+        if ($unit === LineItemUnit::Each) {
+            return $quantity;
+        }
+
+        // Round the intermediate to 6 decimals so ordinary float drift
+        // (e.g. 100 * 1.1 / 10 = 11.000000000000002) doesn't push an
+        // exact-10 boundary up to the next bucket.
+        $tens = round($quantity * 1.1 / 10, 6);
+
+        return (float) (((int) ceil($tens)) * 10);
     }
 
     /**

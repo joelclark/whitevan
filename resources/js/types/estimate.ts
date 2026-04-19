@@ -56,6 +56,7 @@ export type EstimateLineItem = {
     label: string;
     category: string;
     category_label: string;
+    kind: 'material' | 'labor';
     quantity: number;
     unit: string;
     unit_price: number | null;
@@ -91,6 +92,7 @@ export type Estimate = {
     approval_url: string | null;
     contract_signed_at: string | null;
     contract_signed_name: string | null;
+    locked_at: string | null;
     floorplan_assets_status: FloorplanAssetsStatus | null;
     interview_answers: InterviewAnswers;
     line_items?: EstimateLineItem[];
