@@ -1,6 +1,5 @@
 import { Form, Link } from '@inertiajs/react';
 import {
-    ExternalLink,
     FileText,
     FolderOpen,
     MoreHorizontal,
@@ -24,7 +23,6 @@ import { Input } from '@/components/ui/input';
 import { edit as customersEdit } from '@/routes/customers';
 import { pdf as estimatesPdf } from '@/routes/estimates';
 import { edit as projectsEdit } from '@/routes/projects';
-import { show as quotesShow } from '@/routes/quotes';
 import type { Estimate, EstimateStatus } from '@/types';
 import DeleteEstimateDialog from './delete-estimate-dialog';
 import ResubmitEstimateDialog from './resubmit-estimate-dialog';
@@ -178,23 +176,6 @@ export default function EstimateRecordHeader({
                             )}
                         </Form>
                     )}
-
-                {estimate.quote_status === 'sent' && estimate.quote_token && (
-                    <Button
-                        asChild
-                        variant="outline"
-                        className="h-12 px-5 text-base"
-                    >
-                        <a
-                            href={quotesShow(estimate.quote_token).url}
-                            target="_blank"
-                            rel="noreferrer"
-                        >
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            View Quote
-                        </a>
-                    </Button>
-                )}
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>

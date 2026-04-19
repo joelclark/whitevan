@@ -11,6 +11,7 @@ use App\Interviews\LineItemEmitterDispatcher;
 use App\Interviews\LineItemReconciler;
 use App\Models\Estimate;
 use App\Services\ActivityLogger;
+use App\Services\ProjectEventLogger;
 use Illuminate\Http\RedirectResponse;
 
 class EstimateInterviewController extends Controller
@@ -60,6 +61,13 @@ class EstimateInterviewController extends Controller
                 ],
                 account: $account,
                 user: $request->user(),
+            );
+
+            ProjectEventLogger::record(
+                $estimate,
+                ActivityEvent::EstimateInterviewCompleted,
+                user: $request->user(),
+                metadata: ['line_items_count' => count($drafts)],
             );
         }
 

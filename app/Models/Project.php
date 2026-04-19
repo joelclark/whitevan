@@ -82,4 +82,12 @@ class Project extends Model
     {
         return $this->hasMany(Estimate::class);
     }
+
+    /**
+     * @return HasMany<ProjectEvent, $this>
+     */
+    public function events(): HasMany
+    {
+        return $this->hasMany(ProjectEvent::class);
+    }
 }

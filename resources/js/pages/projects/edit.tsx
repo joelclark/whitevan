@@ -4,12 +4,19 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { edit as estimatesEdit } from '@/routes/estimates';
 import { index as projectsIndex } from '@/routes/projects';
-import type { Estimate, EstimateStatus, Project } from '@/types';
+import type {
+    Estimate,
+    EstimateStatus,
+    Project,
+    ProjectEventListItem,
+} from '@/types';
+import ProjectEventsPanel from './project-events-panel';
 import ProjectForm from './project-form';
 import ProjectRecordHeader from './project-record-header';
 
 type Props = {
     project: Project;
+    events: ProjectEventListItem[];
 };
 
 function statusBadge(status: EstimateStatus) {
@@ -41,7 +48,7 @@ function formatDate(value: string): string {
     });
 }
 
-export default function ProjectsEdit({ project }: Props) {
+export default function ProjectsEdit({ project, events }: Props) {
     const estimates: Estimate[] = project.estimates ?? [];
 
     return (
@@ -153,6 +160,10 @@ export default function ProjectsEdit({ project }: Props) {
                             </div>
                         )}
                     </div>
+                </div>
+
+                <div className="mt-10">
+                    <ProjectEventsPanel events={events} />
                 </div>
             </div>
         </>

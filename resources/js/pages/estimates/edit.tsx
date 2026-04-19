@@ -14,6 +14,7 @@ import type {
     FloorplanPagePreview,
     InterviewProps,
 } from '@/types';
+import ApprovalStatusPanel from './approval-status-panel';
 import EstimateRecordHeader from './estimate-record-header';
 import LineItemsPanel from './line-items-panel';
 import RoomsList from './rooms-list';
@@ -105,6 +106,10 @@ export default function EstimatesEdit({
                 />
 
                 <div className="mt-8 max-w-4xl space-y-8 pb-[40vh]">
+                    {estimate.quote_status === 'sent' && (
+                        <ApprovalStatusPanel estimate={estimate} />
+                    )}
+
                     <section>
                         <h2 className="mb-4 text-lg font-semibold">Rooms</h2>
 

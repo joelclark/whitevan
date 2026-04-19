@@ -37,3 +37,18 @@ export type PaginatedProjects = {
     prev_page_url: string | null;
     next_page_url: string | null;
 };
+
+export type ProjectEventActorType = 'contractor' | 'customer' | 'system';
+
+export type ProjectEventListItem = {
+    id: number;
+    event: string;
+    event_label: string;
+    actor_type: ProjectEventActorType;
+    actor_name: string | null;
+    estimate_id: number | null;
+    estimate_title: string | null;
+    estimate_deleted: boolean;
+    metadata: Record<string, unknown> | null;
+    created_at: string;
+};

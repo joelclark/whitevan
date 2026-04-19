@@ -1,6 +1,11 @@
 <?php
 
+use App\Enums\ActivityEvent;
+use App\Models\Estimate;
+use App\Models\Project;
+use App\Models\ProjectEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Assert;
 use Tests\TestCase;
 
 /*
@@ -31,6 +36,38 @@ pest()->extend(TestCase::class)
 
 expect()->extend('toBeOne', function () {
     return $this->toBe(1);
+});
+
+/**
+ * Asserts that a ProjectEvent row was written for the given ActivityEvent,
+ * scoped to the subject (Project or Estimate). When the subject is an
+ * Estimate, both project_id and estimate_id are checked.
+ */
+expect()->extend('toHaveRecordedProjectEvent', function (ActivityEvent $event) {
+    /** @var Project|Estimate $subject */
+    $subject = $this->value;
+
+    $query = ProjectEvent::withoutGlobalScopes()
+        ->where('event', $event->value);
+
+    if ($subject instanceof Estimate) {
+        $query->where('project_id', $subject->project_id)
+            ->where('estimate_id', $subject->id);
+    } else {
+        $query->where('project_id', $subject->id);
+    }
+
+    Assert::assertTrue(
+        $query->exists(),
+        sprintf(
+            'Expected a project_events row for event "%s" scoped to %s#%d, found none.',
+            $event->value,
+            class_basename($subject),
+            $subject->id,
+        ),
+    );
+
+    return $this;
 });
 
 /*

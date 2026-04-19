@@ -87,7 +87,8 @@ export type Estimate = {
     quote_status: QuoteStatus | null;
     quote_token: string | null;
     quote_sent_at: string | null;
-    quote_customer_viewed_at: string | null;
+    approval_token: string | null;
+    approval_url: string | null;
     floorplan_assets_status: FloorplanAssetsStatus | null;
     interview_answers: InterviewAnswers;
     line_items?: EstimateLineItem[];

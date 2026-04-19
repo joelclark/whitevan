@@ -80,6 +80,7 @@ class EstimateFactory extends Factory
             'quote_status' => QuoteStatus::Sent,
             'quote_token' => Str::ulid()->toBase32(),
             'quote_sent_at' => now(),
+            'approval_token' => Str::ulid()->toBase32(),
         ]);
     }
 }
