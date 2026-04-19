@@ -9,6 +9,7 @@ use App\Enums\SecurityGroup;
 use App\Models\Account;
 use App\Models\ActivityLog;
 use App\Models\AiAgentSetting;
+use App\Models\ContractTemplate;
 use App\Models\Customer;
 use App\Models\SecurityGroupUser;
 use App\Models\User;
@@ -142,6 +143,47 @@ class DevSeeder extends Seeder
         $this->seedActivityLogs();
         $this->seedCustomers();
         $this->seedAiAgentSettings();
+        $this->seedContractTemplates();
+    }
+
+    /**
+     * Seed the sysop-managed default contract template. Idempotent — reruns
+     * use firstOrCreate so sysop edits are never overwritten.
+     */
+    private function seedContractTemplates(): void
+    {
+        ContractTemplate::firstOrCreate(
+            ['kind' => ContractTemplate::DEFAULT_KIND],
+            [
+                'label' => 'Default contract',
+                'body' => <<<'MARKDOWN'
+                    # Service agreement
+
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin vitae
+                    tempor lacus. Etiam pretium lectus ut neque tempor, at tincidunt
+                    nulla sagittis. Aliquam erat volutpat. In hac habitasse platea
+                    dictumst.
+
+                    ## Scope of work
+
+                    - Lorem ipsum dolor sit amet.
+                    - Consectetur adipiscing elit.
+                    - Sed do eiusmod tempor incididunt ut labore.
+
+                    ## Payment
+
+                    Nulla facilisi. Curabitur ut nibh nec nunc feugiat tincidunt. Sed
+                    ultrices, urna ac dictum volutpat, leo lorem tincidunt magna, vitae
+                    porta orci magna vitae felis.
+
+                    ## Warranty
+
+                    Mauris vitae volutpat elit. Integer sit amet risus nec lorem
+                    dignissim pretium. Vivamus at lectus sit amet orci rhoncus
+                    sollicitudin vitae non nisi.
+                    MARKDOWN,
+            ],
+        );
     }
 
     /**

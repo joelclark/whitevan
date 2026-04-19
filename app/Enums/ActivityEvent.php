@@ -28,6 +28,11 @@ enum ActivityEvent: string
     case EstimateInterviewCompleted = 'estimate.interview_completed';
     case EstimateQuoteSent = 'estimate.quote_sent';
     case AiAgentSettingUpdated = 'ai.agent_setting_updated';
+    case ContractTemplateUpdated = 'contract.template_updated';
+    case AccountContractUpdated = 'account.contract_updated';
+    case AccountContractReverted = 'account.contract_reverted';
+    case QuoteContractViewed = 'quote.contract_viewed';
+    case QuoteContractSigned = 'quote.contract_signed';
 
     public function label(): string
     {
@@ -56,6 +61,11 @@ enum ActivityEvent: string
             self::EstimateInterviewCompleted => 'Estimate interview completed',
             self::EstimateQuoteSent => 'Quote sent',
             self::AiAgentSettingUpdated => 'AI agent setting updated',
+            self::ContractTemplateUpdated => 'Contract template updated',
+            self::AccountContractUpdated => 'Account contract updated',
+            self::AccountContractReverted => 'Account contract reverted to default',
+            self::QuoteContractViewed => 'Quote contract viewed',
+            self::QuoteContractSigned => 'Quote contract signed',
         };
     }
 
@@ -70,7 +80,9 @@ enum ActivityEvent: string
         return match ($this) {
             self::ProjectCreated,
             self::EstimateCreated,
-            self::EstimateQuoteSent => true,
+            self::EstimateQuoteSent,
+            self::QuoteContractViewed,
+            self::QuoteContractSigned => true,
 
             self::UserLoggedIn,
             self::UserPasswordReset,
@@ -92,7 +104,10 @@ enum ActivityEvent: string
             self::EstimateAgentFailed,
             self::EstimateFloorplanAssetsFailed,
             self::EstimateInterviewCompleted,
-            self::AiAgentSettingUpdated => false,
+            self::AiAgentSettingUpdated,
+            self::ContractTemplateUpdated,
+            self::AccountContractUpdated,
+            self::AccountContractReverted => false,
         };
     }
 }

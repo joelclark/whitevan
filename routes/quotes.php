@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ApprovalFlowController;
+use App\Http\Controllers\ContractSigningController;
 use App\Http\Controllers\QuoteController;
 use Illuminate\Support\Facades\Route;
 
@@ -10,6 +11,10 @@ use Illuminate\Support\Facades\Route;
 // bounce legitimate customers with a 403. The token alone is the access control.
 Route::get('approve/{approval_token}', [ApprovalFlowController::class, 'show'])
     ->name('approve.show');
+Route::get('approve/{approval_token}/sign', [ContractSigningController::class, 'show'])
+    ->name('approve.sign.show');
+Route::post('approve/{approval_token}/sign', [ContractSigningController::class, 'store'])
+    ->name('approve.sign');
 
 // Authenticated — converts an estimate into a customer-visible quote.
 Route::middleware(['auth', 'verified'])->group(function () {

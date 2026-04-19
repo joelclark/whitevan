@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
+import { edit as contractEdit } from '@/routes/admin/contract';
 import { index as usersIndex } from '@/routes/admin/users';
 import type { NavItem } from '@/types';
 
@@ -12,6 +13,11 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'Users',
         href: usersIndex(),
+        icon: null,
+    },
+    {
+        title: 'Contract',
+        href: contractEdit(),
         icon: null,
     },
 ];

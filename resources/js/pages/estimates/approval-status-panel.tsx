@@ -1,4 +1,4 @@
-import { Check, Copy, Mail, MailX, X } from 'lucide-react';
+import { Check, Copy, Mail, MailX, PenLine, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -91,6 +91,8 @@ export default function ApprovalStatusPanel({ estimate }: Props) {
 
     const customerEmail = estimate.customer?.email ?? null;
     const approvalUrl = estimate.approval_url;
+    const signedAt = estimate.contract_signed_at;
+    const signedName = estimate.contract_signed_name;
 
     return (
         <div className="rounded-xl border bg-muted/30 p-4">
@@ -120,6 +122,19 @@ export default function ApprovalStatusPanel({ estimate }: Props) {
             {approvalUrl && (
                 <div className="mt-4 border-t pt-3">
                     <CopyLinkRow label="Approval link" url={approvalUrl} />
+                </div>
+            )}
+            {signedAt && signedName && (
+                <div className="mt-4 flex items-center gap-2 border-t pt-3 text-xs text-emerald-700 dark:text-emerald-400">
+                    <PenLine className="h-3.5 w-3.5" />
+                    <span>
+                        Contract signed by{' '}
+                        <span className="font-medium">{signedName}</span> on{' '}
+                        {new Date(signedAt).toLocaleString(undefined, {
+                            dateStyle: 'long',
+                            timeStyle: 'short',
+                        })}
+                    </span>
                 </div>
             )}
         </div>

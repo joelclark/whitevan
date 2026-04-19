@@ -52,6 +52,7 @@ class Estimate extends Model
             'floorplan_assets_status' => FloorplanAssetsStatus::class,
             'quote_status' => QuoteStatus::class,
             'quote_sent_at' => 'datetime',
+            'contract_signed_at' => 'datetime',
             'total_sqft' => 'integer',
             'interview_answers' => AsArrayObject::class,
 
@@ -146,6 +147,11 @@ class Estimate extends Model
     public function isQuoteSent(): bool
     {
         return $this->quote_status === QuoteStatus::Sent;
+    }
+
+    public function hasSignedContract(): bool
+    {
+        return $this->contract_signed_at !== null;
     }
 
     public function recordProjectActivity(): void
