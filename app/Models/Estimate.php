@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Concerns\BelongsToAccount;
 use App\Enums\EstimateStatus;
 use App\Enums\FloorplanAssetsStatus;
+use App\Enums\LineItemKind;
 use App\Enums\QuoteStatus;
 use App\Enums\Trade;
 use Database\Factories\EstimateFactory;
@@ -53,6 +54,7 @@ class Estimate extends Model
             'quote_status' => QuoteStatus::class,
             'quote_sent_at' => 'datetime',
             'contract_signed_at' => 'datetime',
+            'locked_at' => 'datetime',
             'total_sqft' => 'integer',
             'interview_answers' => AsArrayObject::class,
 
@@ -137,6 +139,22 @@ class Estimate extends Model
     }
 
     /**
+     * @return HasMany<EstimateLineItem, $this>
+     */
+    public function materialLineItems(): HasMany
+    {
+        return $this->activeLineItems()->where('kind', LineItemKind::Material->value);
+    }
+
+    /**
+     * @return HasMany<EstimateLineItem, $this>
+     */
+    public function laborLineItems(): HasMany
+    {
+        return $this->activeLineItems()->where('kind', LineItemKind::Labor->value);
+    }
+
+    /**
      * @return HasMany<EstimateFloorplanPage, $this>
      */
     public function floorplanPages(): HasMany
@@ -152,6 +170,11 @@ class Estimate extends Model
     public function hasSignedContract(): bool
     {
         return $this->contract_signed_at !== null;
+    }
+
+    public function isLocked(): bool
+    {
+        return $this->locked_at !== null;
     }
 
     public function recordProjectActivity(): void

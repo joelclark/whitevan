@@ -28,6 +28,10 @@ class EstimateInterviewController extends Controller
         // Mirrors the 409 convention used by retry().
         abort_if($estimate->status !== EstimateStatus::Ready, 409);
 
+        // Locked estimates are immutable; interview answers drive line item
+        // reconciliation, which would invalidate the signed quote.
+        abort_if($estimate->isLocked(), 409, 'Estimate is locked after customer acceptance.');
+
         $validated = $request->validated();
 
         $interview = InterviewDispatcher::for($estimate);

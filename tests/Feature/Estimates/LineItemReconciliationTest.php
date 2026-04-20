@@ -83,7 +83,7 @@ test('changing an answer after completion deprecates the old line item and creat
     completeInterview($this, $estimate, $account, ['material' => 'lvp']);
 
     $lvpItem = EstimateLineItem::where('estimate_id', $estimate->id)
-        ->where('key', 'install_lvp')
+        ->where('key', 'install_lvp_labor')
         ->first();
     expect($lvpItem)->not->toBeNull();
 
@@ -100,7 +100,7 @@ test('changing an answer after completion deprecates the old line item and creat
     expect($lvpItem->deprecated_at)->not->toBeNull();
 
     $tileItem = EstimateLineItem::where('estimate_id', $estimate->id)
-        ->where('key', 'install_tile')
+        ->where('key', 'install_tile_labor')
         ->first();
     expect($tileItem)->not->toBeNull()
         ->and($tileItem->deprecated_at)->toBeNull();
@@ -115,7 +115,7 @@ test('reverting an answer un-deprecates the item with its price intact', functio
     completeInterview($this, $estimate, $account, ['material' => 'lvp']);
 
     $lvpItem = EstimateLineItem::where('estimate_id', $estimate->id)
-        ->where('key', 'install_lvp')
+        ->where('key', 'install_lvp_labor')
         ->first();
     $lvpItem->update(['unit_price' => 4.50]);
 
@@ -171,8 +171,10 @@ test('deprecated items are excluded from the edit page payload', function () {
         ->pluck('key')
         ->all();
 
-    expect($lineItemKeys)->toContain('install_tile')
-        ->not->toContain('install_lvp');
+    expect($lineItemKeys)->toContain('install_tile_labor')
+        ->toContain('install_tile_material')
+        ->not->toContain('install_lvp_labor')
+        ->not->toContain('install_lvp_material');
 });
 
 test('updating price on a deprecated item returns 404', function () {
@@ -184,7 +186,7 @@ test('updating price on a deprecated item returns 404', function () {
     completeInterview($this, $estimate, $account, ['material' => 'lvp']);
 
     $lvpItem = EstimateLineItem::where('estimate_id', $estimate->id)
-        ->where('key', 'install_lvp')
+        ->where('key', 'install_lvp_labor')
         ->first();
 
     // Deprecate it

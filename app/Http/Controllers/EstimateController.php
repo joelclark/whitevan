@@ -16,6 +16,7 @@ use App\Jobs\ProcessEstimatePdfJob;
 use App\Models\Estimate;
 use App\Models\Project;
 use App\Services\ActivityLogger;
+use App\Services\DepositResolver;
 use App\Services\ProjectEventLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -79,7 +80,7 @@ class EstimateController extends Controller
         return redirect()->route('estimates.edit', $estimate);
     }
 
-    public function edit(Estimate $estimate): Response
+    public function edit(Estimate $estimate, DepositResolver $depositResolver): Response
     {
         $estimate->load(['customer', 'project', 'rooms', 'floorplanPages', 'activeLineItems']);
 
@@ -134,6 +135,7 @@ class EstimateController extends Controller
                 'label' => $li->label,
                 'category' => $li->category->value,
                 'category_label' => $li->category->label(),
+                'kind' => $li->kind->value,
                 'quantity' => (float) $li->quantity,
                 'unit' => $li->unit->abbreviation(),
                 'unit_price' => $li->unit_price !== null ? (float) $li->unit_price : null,
@@ -146,11 +148,18 @@ class EstimateController extends Controller
             ? route('approve.show', ['approval_token' => $estimate->approval_token])
             : null;
 
+        $account = $estimate->account;
+
         return Inertia::render('estimates/edit', [
             'estimate' => $serialized,
             'interview' => $interviewProps,
             'floorplan_pages' => $floorplanPages,
             'line_items' => $lineItems,
+            'deposit_defaults' => [
+                'material_deposit_percent' => $depositResolver->materialPercentFor($account),
+                'labor_deposit_percent' => $depositResolver->laborPercentFor($account),
+            ],
+            'is_locked' => $estimate->isLocked(),
         ]);
     }
 
@@ -285,15 +294,16 @@ class EstimateController extends Controller
         Estimate $estimate,
         int $lineItem,
     ): RedirectResponse {
+        abort_if($estimate->isLocked(), 409, 'Estimate is locked after customer acceptance.');
+
         $item = $estimate->activeLineItems()->findOrFail($lineItem);
 
         $validated = $request->validate([
-            'unit_price' => ['present', 'nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'unit_price' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:500'],
         ]);
 
-        $item->update([
-            'unit_price' => $validated['unit_price'],
-        ]);
+        $item->update($validated);
 
         $estimate->recordProjectActivity();
 

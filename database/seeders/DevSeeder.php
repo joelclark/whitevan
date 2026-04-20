@@ -11,6 +11,7 @@ use App\Models\ActivityLog;
 use App\Models\AiAgentSetting;
 use App\Models\ContractTemplate;
 use App\Models\Customer;
+use App\Models\DepositDefaults;
 use App\Models\SecurityGroupUser;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -144,6 +145,22 @@ class DevSeeder extends Seeder
         $this->seedCustomers();
         $this->seedAiAgentSettings();
         $this->seedContractTemplates();
+        $this->seedDepositDefaults();
+    }
+
+    /**
+     * Seed the sysop-managed default deposit percentages. Idempotent — reruns
+     * use firstOrCreate so sysop edits are never overwritten.
+     */
+    private function seedDepositDefaults(): void
+    {
+        DepositDefaults::firstOrCreate(
+            ['kind' => DepositDefaults::DEFAULT_KIND],
+            [
+                'material_deposit_percent' => 100,
+                'labor_deposit_percent' => 80,
+            ],
+        );
     }
 
     /**

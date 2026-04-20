@@ -24,6 +24,7 @@ class LineItemReconciler
                     $row->update([
                         'label' => $draft->label,
                         'category' => $draft->category,
+                        'kind' => $draft->kind,
                         'quantity' => $draft->quantity,
                         'unit' => $draft->unit,
                         'notes' => $draft->notes,
@@ -35,6 +36,7 @@ class LineItemReconciler
                         'key' => $draft->key,
                         'label' => $draft->label,
                         'category' => $draft->category,
+                        'kind' => $draft->kind,
                         'quantity' => $draft->quantity,
                         'unit' => $draft->unit,
                         'notes' => $draft->notes,

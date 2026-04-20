@@ -33,6 +33,11 @@ enum ActivityEvent: string
     case AccountContractReverted = 'account.contract_reverted';
     case QuoteContractViewed = 'quote.contract_viewed';
     case QuoteContractSigned = 'quote.contract_signed';
+    case DepositDefaultsUpdated = 'deposit.defaults_updated';
+    case AccountDepositOverrideUpdated = 'account.deposit_override_updated';
+    case AccountDepositOverrideReverted = 'account.deposit_override_reverted';
+    case EstimateQuoteAccepted = 'estimate.quote_accepted';
+    case EstimateQuoteChangeDetectedAtSigning = 'estimate.quote_change_detected_at_signing';
 
     public function label(): string
     {
@@ -66,6 +71,11 @@ enum ActivityEvent: string
             self::AccountContractReverted => 'Account contract reverted to default',
             self::QuoteContractViewed => 'Quote contract viewed',
             self::QuoteContractSigned => 'Quote contract signed',
+            self::DepositDefaultsUpdated => 'Deposit defaults updated',
+            self::AccountDepositOverrideUpdated => 'Account deposit override updated',
+            self::AccountDepositOverrideReverted => 'Account deposit override reverted to default',
+            self::EstimateQuoteAccepted => 'Quote accepted',
+            self::EstimateQuoteChangeDetectedAtSigning => 'Quote change detected at signing',
         };
     }
 
@@ -82,7 +92,8 @@ enum ActivityEvent: string
             self::EstimateCreated,
             self::EstimateQuoteSent,
             self::QuoteContractViewed,
-            self::QuoteContractSigned => true,
+            self::QuoteContractSigned,
+            self::EstimateQuoteAccepted => true,
 
             self::UserLoggedIn,
             self::UserPasswordReset,
@@ -107,7 +118,11 @@ enum ActivityEvent: string
             self::AiAgentSettingUpdated,
             self::ContractTemplateUpdated,
             self::AccountContractUpdated,
-            self::AccountContractReverted => false,
+            self::AccountContractReverted,
+            self::DepositDefaultsUpdated,
+            self::AccountDepositOverrideUpdated,
+            self::AccountDepositOverrideReverted,
+            self::EstimateQuoteChangeDetectedAtSigning => false,
         };
     }
 }

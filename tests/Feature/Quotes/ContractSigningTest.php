@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\Estimate;
 use App\Models\ProjectEvent;
 use App\Services\ProjectEventLogger;
+use App\Services\QuoteSnapshot;
 use Illuminate\Database\UniqueConstraintViolationException;
 
 beforeEach(function () {
@@ -24,6 +25,13 @@ function makeSentEstimate(): Estimate
     $customer = Customer::factory()->create(['account_id' => $account->id]);
 
     return Estimate::factory()->forCustomer($customer)->quoteSent()->create();
+}
+
+function quoteHashFor(Estimate $estimate): string
+{
+    $svc = app(QuoteSnapshot::class);
+
+    return $svc->hash($svc->build($estimate->fresh()));
 }
 
 test('sign page renders the effective contract body as HTML', function () {
@@ -83,7 +91,7 @@ test('customer can sign the contract', function () {
 
     $this->post(
         route('approve.sign', ['approval_token' => $estimate->approval_token]),
-        ['name' => 'Dana Customer', 'acknowledged' => '1'],
+        ['name' => 'Dana Customer', 'acknowledged' => '1', 'quote_hash' => quoteHashFor($estimate)],
     )->assertRedirect(route('approve.show', ['approval_token' => $estimate->approval_token]));
 
     $estimate->refresh();
@@ -106,7 +114,7 @@ test('signing requires the acknowledged box to be checked', function () {
 
     $this->post(
         route('approve.sign', ['approval_token' => $estimate->approval_token]),
-        ['name' => 'Dana Customer'],
+        ['name' => 'Dana Customer', 'quote_hash' => quoteHashFor($estimate)],
     )->assertInvalid(['acknowledged']);
 
     expect($estimate->refresh()->contract_signed_at)->toBeNull();
@@ -117,7 +125,7 @@ test('signing requires a name of at least 2 characters', function () {
 
     $this->post(
         route('approve.sign', ['approval_token' => $estimate->approval_token]),
-        ['name' => 'A', 'acknowledged' => '1'],
+        ['name' => 'A', 'acknowledged' => '1', 'quote_hash' => quoteHashFor($estimate)],
     )->assertInvalid(['name']);
 });
 
@@ -126,14 +134,14 @@ test('already-signed estimate cannot be signed again', function () {
 
     $this->post(
         route('approve.sign', ['approval_token' => $estimate->approval_token]),
-        ['name' => 'Dana Customer', 'acknowledged' => '1'],
+        ['name' => 'Dana Customer', 'acknowledged' => '1', 'quote_hash' => quoteHashFor($estimate)],
     )->assertRedirect();
 
     $firstSignedAt = $estimate->refresh()->contract_signed_at;
 
     $this->post(
         route('approve.sign', ['approval_token' => $estimate->approval_token]),
-        ['name' => 'Imposter', 'acknowledged' => '1'],
+        ['name' => 'Imposter', 'acknowledged' => '1', 'quote_hash' => quoteHashFor($estimate)],
     )->assertNotFound();
 
     $estimate->refresh();
@@ -146,7 +154,7 @@ test('sign page shows the frozen snapshot after signing, not the current body', 
 
     $this->post(
         route('approve.sign', ['approval_token' => $estimate->approval_token]),
-        ['name' => 'Dana', 'acknowledged' => '1'],
+        ['name' => 'Dana', 'acknowledged' => '1', 'quote_hash' => quoteHashFor($estimate)],
     );
 
     // Override the account contract AFTER signing.
@@ -215,7 +223,7 @@ test('visiting the sign page after signing does not record a new view event', fu
 
     $this->post(
         route('approve.sign', ['approval_token' => $estimate->approval_token]),
-        ['name' => 'Dana', 'acknowledged' => '1'],
+        ['name' => 'Dana', 'acknowledged' => '1', 'quote_hash' => quoteHashFor($estimate)],
     );
 
     // Sign action records ContractSigned, and the first sign page visit before

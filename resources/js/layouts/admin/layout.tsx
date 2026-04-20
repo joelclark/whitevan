@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as contractEdit } from '@/routes/admin/contract';
+import { edit as depositsEdit } from '@/routes/admin/deposits';
 import { index as usersIndex } from '@/routes/admin/users';
 import type { NavItem } from '@/types';
 
@@ -18,6 +19,11 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'Contract',
         href: contractEdit(),
+        icon: null,
+    },
+    {
+        title: 'Deposits',
+        href: depositsEdit(),
         icon: null,
     },
 ];
