@@ -72,8 +72,8 @@ Production uses PostgreSQL. Create a database and user:
 
 ```bash
 sudo -u postgres psql <<SQL
-CREATE USER juniper WITH PASSWORD 'secret';
-CREATE DATABASE juniper OWNER juniper;
+CREATE USER whitevan WITH PASSWORD 'whitevan';
+CREATE DATABASE whitevan OWNER whitevan;
 SQL
 ```
 
@@ -96,9 +96,9 @@ Edit `.env` with your database and Google OAuth credentials:
 DB_CONNECTION=pgsql
 DB_HOST=127.0.0.1
 DB_PORT=5432
-DB_DATABASE=juniper
-DB_USERNAME=juniper
-DB_PASSWORD=secret
+DB_DATABASE=whitevan
+DB_USERNAME=whitevan
+DB_PASSWORD=whitevan
 
 GOOGLE_OAUTH_CLIENT_ID=your-client-id
 GOOGLE_OAUTH_CLIENT_SECRET=your-client-secret
