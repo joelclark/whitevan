@@ -28,6 +28,7 @@ sudo apt install -y \
   php8.4-sqlite3 \
   postgresql \
   postgresql-contrib \
+  poppler-utils \
   git \
   unzip \
   curl
@@ -35,6 +36,10 @@ sudo apt install -y \
 
 The `tokenizer` and `pdo` extensions are bundled into the core `php8.4` package
 on Ubuntu, so there's no separate package to install for them.
+
+`poppler-utils` provides `pdftoppm` and `pdfinfo`, which the floorplan renderer
+shells out to when processing uploaded estimate PDFs. Without it, estimate
+extraction succeeds but floorplan rendering fails with a "render failed" status.
 
 Make PHP 8.4 the default CLI if you have multiple versions installed:
 

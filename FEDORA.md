@@ -20,12 +20,18 @@ sudo dnf install -y \
   php-sqlite3 \
   postgresql-server \
   postgresql \
+  poppler-utils \
   nodejs \
   npm \
   git \
   unzip \
   curl
 ```
+
+`poppler-utils` provides `pdftoppm` and `pdfinfo`, which the floorplan
+renderer shells out to when processing uploaded estimate PDFs. Without it,
+estimate extraction succeeds but floorplan rendering fails with a "render
+failed" status.
 
 If your Fedora version doesn't ship PHP 8.4, enable the Remi repository:
 
