@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'quantity',
     'unit',
     'unit_price',
+    'price_prefilled',
     'notes',
     'position',
     'deprecated_at',
@@ -41,6 +42,7 @@ class EstimateLineItem extends Model
             'unit' => LineItemUnit::class,
             'quantity' => 'decimal:2',
             'unit_price' => 'decimal:2',
+            'price_prefilled' => 'boolean',
             'position' => 'integer',
             'deprecated_at' => 'datetime',
         ];

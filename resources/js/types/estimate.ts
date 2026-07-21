@@ -60,6 +60,7 @@ export type EstimateLineItem = {
     quantity: number;
     unit: string;
     unit_price: number | null;
+    price_prefilled: boolean;
     notes: string | null;
 };
 

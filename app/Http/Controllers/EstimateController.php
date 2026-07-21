@@ -139,6 +139,7 @@ class EstimateController extends Controller
                 'quantity' => (float) $li->quantity,
                 'unit' => $li->unit->abbreviation(),
                 'unit_price' => $li->unit_price !== null ? (float) $li->unit_price : null,
+                'price_prefilled' => (bool) $li->price_prefilled,
                 'notes' => $li->notes,
             ])
             ->values()
@@ -302,6 +303,11 @@ class EstimateController extends Controller
             'unit_price' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:500'],
         ]);
+
+        // Once the contractor owns the price, it's no longer a prefill suggestion.
+        if (array_key_exists('unit_price', $validated)) {
+            $validated['price_prefilled'] = false;
+        }
 
         $item->update($validated);
 

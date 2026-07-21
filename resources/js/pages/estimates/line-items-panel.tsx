@@ -261,6 +261,21 @@ function NotesInput({
     );
 }
 
+function ReusedHint({ item }: { item: EstimateLineItem }) {
+    if (!item.price_prefilled || item.unit_price === null) {
+        return null;
+    }
+
+    return (
+        <span
+            title="Reused from a previous estimate — edit to override"
+            className="rounded-sm bg-muted px-1 py-0.5 text-[10px] leading-none font-medium text-muted-foreground"
+        >
+            reused
+        </span>
+    );
+}
+
 function RoleDot({ role }: { role: 'material' | 'labor' }) {
     return (
         <span
@@ -294,6 +309,7 @@ function SubRow({
                 <span className="text-sm text-muted-foreground capitalize">
                     {role}
                 </span>
+                {!isLocked && <ReusedHint item={item} />}
             </div>
             <span className="text-right text-sm text-muted-foreground tabular-nums">
                 {formatQuantity(item)}
@@ -388,6 +404,7 @@ function SoloRow({
             <div className="flex min-w-0 items-center gap-2">
                 <RoleDot role={item.kind} />
                 <span className="text-sm">{item.label}</span>
+                {!isLocked && <ReusedHint item={item} />}
             </div>
             <span className="text-right text-sm text-muted-foreground tabular-nums">
                 {formatQuantity(item)}
