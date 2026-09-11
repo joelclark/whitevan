@@ -25,17 +25,26 @@ class LineItemPriceMemory
             return [];
         }
 
-        return EstimateLineItem::query()
+        // Reduce to one row per key in SQL. An account's line-item history grows
+        // without bound and this runs on every reconcile, so hydrating every
+        // historical match and de-duplicating in PHP is not an option.
+        $latestPerKey = EstimateLineItem::query()
             ->join('estimates', 'estimates.id', '=', 'estimate_line_items.estimate_id')
             ->where('estimates.account_id', $estimate->account_id)
             ->whereNull('estimates.deleted_at')
             ->where('estimate_line_items.estimate_id', '!=', $estimate->id)
             ->where('estimate_line_items.kind', LineItemKind::Labor->value)
+            // A deprecated row was dropped from its quote and never reviewed
+            // again, so its price is not evidence of what the account charges.
+            ->whereNull('estimate_line_items.deprecated_at')
             ->whereNotNull('estimate_line_items.unit_price')
             ->whereIn('estimate_line_items.key', $keys)
-            ->orderByDesc('estimate_line_items.id')
-            ->get(['estimate_line_items.key', 'estimate_line_items.unit_price'])
-            ->unique('key')
+            ->groupBy('estimate_line_items.key')
+            ->selectRaw('max(estimate_line_items.id) as id');
+
+        return EstimateLineItem::query()
+            ->whereIn('id', $latestPerKey)
+            ->get(['key', 'unit_price'])
             ->mapWithKeys(fn (EstimateLineItem $item): array => [$item->key => (float) $item->unit_price])
             ->all();
     }

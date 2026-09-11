@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Estimate;
 use App\Models\EstimateLineItem;
 use App\Models\EstimateRoom;
+use Illuminate\Support\Facades\DB;
 
 function priceMemoryEstimate(Account $account): Estimate
 {
@@ -197,4 +198,88 @@ test('the most recent prior labor price wins', function () {
         ->firstOrFail();
 
     expect($laborItem->unit_price)->toBe('6.50');
+});
+
+test('a deprecated line item is not used as a price source', function () {
+    $account = Account::factory()->create();
+
+    // A real, reviewed price on a live quote.
+    $first = priceMemoryEstimate($account);
+    completeFlooringInterview($this, $first, $account);
+    EstimateLineItem::where('estimate_id', $first->id)
+        ->where('key', 'install_lvp_labor')
+        ->firstOrFail()
+        ->update(['unit_price' => 3.00, 'price_prefilled' => false]);
+
+    // A fat-fingered price that is then dropped from its quote: switching the
+    // material re-emits against tile and deprecates the LVP rows. The bad
+    // number is now the newest row for that key, but it never reached a
+    // customer and was never corrected.
+    $second = priceMemoryEstimate($account);
+    completeFlooringInterview($this, $second, $account);
+    EstimateLineItem::where('estimate_id', $second->id)
+        ->where('key', 'install_lvp_labor')
+        ->firstOrFail()
+        ->update(['unit_price' => 300.00, 'price_prefilled' => false]);
+
+    $this->actingAs($account->owner)
+        ->post(route('estimates.interview.answer', $second), [
+            'question_key' => 'material',
+            'room_id' => $second->rooms->first()->id,
+            'value' => 'tile',
+        ])
+        ->assertRedirect();
+
+    expect(
+        EstimateLineItem::where('estimate_id', $second->id)
+            ->where('key', 'install_lvp_labor')
+            ->firstOrFail()
+            ->deprecated_at
+    )->not->toBeNull();
+
+    $third = priceMemoryEstimate($account);
+    completeFlooringInterview($this, $third, $account);
+
+    expect(
+        EstimateLineItem::where('estimate_id', $third->id)
+            ->where('key', 'install_lvp_labor')
+            ->firstOrFail()
+            ->unit_price
+    )->toBe('3.00');
+});
+
+test('re-answering an already-emitted interview runs no price lookup', function () {
+    $account = Account::factory()->create();
+
+    $estimate = priceMemoryEstimate($account);
+    completeFlooringInterview($this, $estimate, $account);
+
+    // Answering transitions for the first time emits a new key, so that edit
+    // legitimately needs a lookup. Bumping the count afterwards does not.
+    $this->actingAs($account->owner)
+        ->post(route('estimates.interview.answer', $estimate), [
+            'question_key' => 'transitions',
+            'room_id' => null,
+            'value' => 2,
+        ])
+        ->assertRedirect();
+
+    // Steady state: every emitted key already has a row, so no draft is
+    // eligible for a prefill and the cross-estimate lookup should not run.
+    $lookups = 0;
+    DB::listen(function ($query) use (&$lookups): void {
+        if (str_contains($query->sql, 'max(estimate_line_items.id)')) {
+            $lookups++;
+        }
+    });
+
+    $this->actingAs($account->owner)
+        ->post(route('estimates.interview.answer', $estimate), [
+            'question_key' => 'transitions',
+            'room_id' => null,
+            'value' => 3,
+        ])
+        ->assertRedirect();
+
+    expect($lookups)->toBe(0);
 });

@@ -10,6 +10,7 @@ use App\Mail\QuoteSentToCustomer;
 use App\Models\Estimate;
 use App\Services\ActivityLogger;
 use App\Services\ProjectEventLogger;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -27,8 +28,17 @@ class QuoteController extends Controller
 
         abort_if($estimate->isLocked(), 409, 'Estimate is locked after customer acceptance.');
         abort_unless($estimate->status === EstimateStatus::Ready, 422);
+        // A prefilled price is a suggestion carried over from an older
+        // estimate, not a reviewed number. Treating it as unpriced keeps the
+        // send guard doing what it was there for: forcing a human to sign off
+        // on every figure the customer will see.
         abort_unless(
-            $estimate->activeLineItems()->whereNull('unit_price')->doesntExist(),
+            $estimate->activeLineItems()
+                ->where(function (Builder $query): void {
+                    $query->whereNull('unit_price')
+                        ->orWhere('price_prefilled', true);
+                })
+                ->doesntExist(),
             422,
         );
 

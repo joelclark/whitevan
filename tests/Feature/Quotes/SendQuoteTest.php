@@ -267,3 +267,46 @@ test('no mail is queued when customer has no email', function () {
     expect($estimate->quote_status)->toBe(QuoteStatus::Sent)
         ->and($estimate->approval_token)->not->toBeNull();
 });
+
+test('cannot send while a reused price is still unconfirmed', function () {
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    $estimate = Estimate::factory()->forCustomer($customer)->create();
+    EstimateLineItem::factory()->create([
+        'estimate_id' => $estimate->id,
+        'unit_price' => 12.00,
+        'price_prefilled' => true,
+    ]);
+
+    $this->actingAs($account->owner)
+        ->post(route('estimates.send-quote', $estimate))
+        ->assertStatus(422);
+
+    expect($estimate->refresh()->quote_status)->toBeNull();
+});
+
+test('confirming a reused price unblocks the send', function () {
+    $account = Account::factory()->create();
+    $customer = Customer::factory()->create(['account_id' => $account->id]);
+    $estimate = Estimate::factory()->forCustomer($customer)->create();
+    $item = EstimateLineItem::factory()->create([
+        'estimate_id' => $estimate->id,
+        'unit_price' => 12.00,
+        'price_prefilled' => true,
+    ]);
+
+    // Re-submitting the same price is how the contractor takes ownership of it.
+    $this->actingAs($account->owner)
+        ->patch(route('estimates.line-items.update', [$estimate, $item]), [
+            'unit_price' => 12.00,
+        ])
+        ->assertRedirect();
+
+    expect($item->refresh()->price_prefilled)->toBeFalse();
+
+    $this->actingAs($account->owner)
+        ->post(route('estimates.send-quote', $estimate))
+        ->assertRedirect();
+
+    expect($estimate->refresh()->quote_status)->toBe(QuoteStatus::Sent);
+});

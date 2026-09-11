@@ -141,7 +141,10 @@ function PriceInput({
     function save() {
         const parsed = value === '' ? null : parseFloat(value);
 
-        if (parsed === lastSaved.current) {
+        // An unchanged value normally needs no round trip, but a prefilled
+        // price does: re-submitting it is how the contractor takes ownership
+        // of the number and clears the flag that blocks sending.
+        if (parsed === lastSaved.current && !item.price_prefilled) {
             return;
         }
 
@@ -261,18 +264,45 @@ function NotesInput({
     );
 }
 
-function ReusedHint({ item }: { item: EstimateLineItem }) {
+function ReusedHint({
+    estimateId,
+    item,
+}: {
+    estimateId: number;
+    item: EstimateLineItem;
+}) {
+    const [confirming, setConfirming] = useState(false);
+
     if (!item.price_prefilled || item.unit_price === null) {
         return null;
     }
 
+    function confirm() {
+        setConfirming(true);
+
+        router.patch(
+            EstimateController.updateLineItem.url({
+                estimate: estimateId,
+                lineItem: item.id,
+            }),
+            { unit_price: item.unit_price },
+            {
+                preserveScroll: true,
+                onFinish: () => setConfirming(false),
+            },
+        );
+    }
+
     return (
-        <span
-            title="Reused from a previous estimate — edit to override"
-            className="rounded-sm bg-muted px-1 py-0.5 text-[10px] leading-none font-medium text-muted-foreground"
+        <button
+            type="button"
+            onClick={confirm}
+            disabled={confirming}
+            title="Reused from a previous estimate. Click to confirm this price, or edit it to override. The quote can't be sent until every reused price is confirmed."
+            className="rounded-sm bg-amber-100 px-1 py-0.5 text-[10px] leading-none font-medium text-amber-900 hover:bg-amber-200 disabled:opacity-50 dark:bg-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900/60"
         >
             reused
-        </span>
+        </button>
     );
 }
 
@@ -309,7 +339,9 @@ function SubRow({
                 <span className="text-sm text-muted-foreground capitalize">
                     {role}
                 </span>
-                {!isLocked && <ReusedHint item={item} />}
+                {!isLocked && (
+                    <ReusedHint estimateId={estimateId} item={item} />
+                )}
             </div>
             <span className="text-right text-sm text-muted-foreground tabular-nums">
                 {formatQuantity(item)}
@@ -404,7 +436,9 @@ function SoloRow({
             <div className="flex min-w-0 items-center gap-2">
                 <RoleDot role={item.kind} />
                 <span className="text-sm">{item.label}</span>
-                {!isLocked && <ReusedHint item={item} />}
+                {!isLocked && (
+                    <ReusedHint estimateId={estimateId} item={item} />
+                )}
             </div>
             <span className="text-right text-sm text-muted-foreground tabular-nums">
                 {formatQuantity(item)}
