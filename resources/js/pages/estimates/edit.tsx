@@ -110,7 +110,11 @@ export default function EstimatesEdit({
                     estimate={estimate}
                     allLineItemsPriced={
                         line_items.length > 0 &&
-                        line_items.every((item) => item.unit_price !== null)
+                        line_items.every(
+                            (item) =>
+                                item.unit_price !== null &&
+                                !item.price_prefilled,
+                        )
                     }
                 />
 
